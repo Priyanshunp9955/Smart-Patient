@@ -640,6 +640,11 @@ a {
     color: var(--primary);
 }
 
+.sidebar-nav a.active {
+    font-weight: 600;
+    box-shadow: inset 3px 0 0 var(--primary);
+}
+
 .sidebar-bottom {
     margin-top: auto;
     border-top: 1px solid var(--border);
@@ -1049,6 +1054,10 @@ a {
 
     .sidebar-nav a {
         white-space: nowrap;
+    }
+
+    .sidebar-nav a.active {
+        box-shadow: inset 0 -3px 0 var(--primary);
     }
 
     .dashboard-main {

@@ -15,7 +15,7 @@ CHROME = Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe")
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--suite", choices=("notifications", "health-readings"), default="notifications")
+    parser.add_argument("--suite", choices=("notifications", "health-readings", "sidebar"), default="notifications")
     args = parser.parse_args()
     if not CHROME.is_file():
         raise SystemExit("Google Chrome is required for these browser checks.")
@@ -58,7 +58,11 @@ def main():
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
-            self.wfile.write(data)
+            try:
+                self.wfile.write(data)
+            except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError):
+                # Navigating or removing an iframe may cancel its pending assets.
+                pass
 
         def log_message(self, *args):
             pass

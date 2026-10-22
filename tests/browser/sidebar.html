@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Sidebar navigation checks</title>
+<pre id="results">RUNNING</pre>
+<script>
+"use strict";
+(async () => {
+    const results = [];
+    const pause = (ms = 20) => new Promise(resolve => setTimeout(resolve, ms));
+    function assert(condition, message) { if (!condition) throw new Error(message); }
+    async function waitFor(condition) {
+        for (let attempt = 0; attempt < 250; attempt++) {
+            if (condition()) return;
+            await pause();
+        }
+        throw new Error("Timed out waiting for sidebar selection");
+    }
+    async function setup(url = "/dashboard.html", width = 1366) {
+        const frame = document.createElement("iframe");
+        frame.style.cssText = `width:${width}px;height:768px;border:0;display:block`;
+        const loaded = new Promise(resolve => { frame.onload = resolve; });
+        frame.src = url;
+        document.body.appendChild(frame);
+        await loaded;
+        // Check navigation independently of compositor animation timing.
+        frame.contentDocument.documentElement.style.scrollBehavior = "auto";
+        await pause(50);
+        return { frame, query: selector => frame.contentDocument.querySelector(selector) };
+    }
+    function current(context) {
+        const selected = context.frame.contentDocument.querySelectorAll(".sidebar-nav a.active");
+        assert(selected.length === 1, "Expected exactly one active link");
+        const announced = context.frame.contentDocument.querySelectorAll(".sidebar-nav [aria-current]");
+        assert(announced.length === 1 && announced[0] === selected[0], "Accessible current item differs from visual selection");
+        return selected[0].textContent.trim();
+    }
+    async function check(label, test) {
+        try { await test(); results.push("PASS " + label); }
+        catch (error) { results.push("FAIL " + label + ": " + error.message); }
+        document.querySelectorAll("iframe").forEach(frame => frame.remove());
+    }
+    for (const [path, label] of [["/dashboard.html", "Dashboard"], ["/add-reading.html", "Add Reading"], ["/consultation.html", "Doctor Consultation"]]) {
+        await check(label + " is selected on its page", async () => {
+            const context = await setup(path);
+            assert(current(context) === label, "Wrong page selected");
+            assert(context.query(".sidebar-nav a.active").getAttribute("aria-current") === "page", "Page selection not announced");
+        });
+    }
+    for (const [hash, label] of [["#recent-readings", "Health Records"], ["#health-trends", "Health Trends"], ["#health-alerts", "Health Alerts"]]) {
+        await check(label + " is selected for a direct section link", async () => {
+            const context = await setup("/dashboard.html" + hash);
+            assert(current(context) === label, "Direct link selected Dashboard instead of section");
+            assert(context.query(".sidebar-nav a.active").getAttribute("aria-current") === "location", "Section selection not announced");
+        });
+        await check("Clicking " + label + " changes the active marker", async () => {
+            const context = await setup();
+            context.query(`.sidebar-nav a[href="${hash}"]`).click();
+            assert(current(context) === label, "Clicked link not immediately active");
+            await pause(1500);
+            assert(current(context) === label, "Selection changed after navigation: " + current(context) + ", scroll=" + context.frame.contentWindow.scrollY);
+        });
+    }
+    await check("A section link from another page selects the destination section", async () => {
+        const context = await setup("/add-reading.html");
+        context.query('.sidebar-nav a[href="dashboard.html#recent-readings"]').click();
+        await waitFor(() => context.frame.contentWindow.location.pathname === "/dashboard.html" && context.query('.sidebar-nav a.active[aria-current="location"]'));
+        assert(current(context) === "Health Records", "Cross-page navigation selected wrong link");
+    });
+    await check("Browser Back restores the previous section marker", async () => {
+        const context = await setup();
+        context.query('.sidebar-nav a[href="#health-trends"]').click();
+        await waitFor(() => context.frame.contentWindow.location.hash === "#health-trends");
+        context.query('.sidebar-nav a[href="#recent-readings"]').click();
+        await waitFor(() => context.frame.contentWindow.location.hash === "#recent-readings");
+        context.frame.contentWindow.history.back();
+        await waitFor(() => context.frame.contentWindow.location.hash === "#health-trends" && current(context) === "Health Trends");
+    });
+    await check("Manual section scrolling updates the active marker", async () => {
+        const context = await setup();
+        context.query("#recent-readings").scrollIntoView({ block: "start", behavior: "instant" });
+        // Deliver the event explicitly because virtual time skips compositor ticks.
+        context.frame.contentWindow.dispatchEvent(new context.frame.contentWindow.Event("scroll"));
+        await pause(100);
+        assert(current(context) === "Health Records", "Scroll to records selected " + current(context) + ", y=" + context.frame.contentWindow.scrollY + ", sectionTop=" + context.query("#recent-readings").getBoundingClientRect().top);
+        context.frame.contentWindow.scrollTo({ top: 0, behavior: "instant" });
+        context.frame.contentWindow.dispatchEvent(new context.frame.contentWindow.Event("scroll"));
+        await pause(100);
+        assert(current(context) === "Dashboard", "Scroll to top selected " + current(context) + ", y=" + context.frame.contentWindow.scrollY);
+    });
+    await check("The active mobile tab is visible without moving page content", async () => {
+        const context = await setup("/consultation.html", 390);
+        assert(current(context) === "Doctor Consultation", "Wrong mobile selection");
+        const menu = context.query(".sidebar-nav").getBoundingClientRect();
+        const active = context.query(".sidebar-nav a.active").getBoundingClientRect();
+        assert(active.left >= menu.left - 1 && active.right <= menu.right + 1, "Active tab is outside horizontal menu");
+        assert(context.frame.contentWindow.scrollY === 0, "Revealing active tab scrolled the page");
+    });
+    await check("Unknown dashboard fragments fall back to the page marker", async () => {
+        const context = await setup("/dashboard.html#unknown-section");
+        assert(current(context) === "Dashboard", "Unknown section broke page selection");
+    });
+    document.querySelector("#results").textContent = results.join("\n") + "\nDONE";
+})().catch(error => { document.querySelector("#results").textContent = "FAIL " + error.stack; });
+</script>
+</html>
