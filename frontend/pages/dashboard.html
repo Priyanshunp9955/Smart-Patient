@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Patient Dashboard | SmartHealth</title>
+
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <link rel="stylesheet" href="/assets/css/page-layout.css">
+    <link rel="stylesheet" href="/assets/css/notifications.css">
+
+    <script src="https://cdn.plot.ly/plotly-3.1.0.min.js"></script>
+</head>
+
+<body class="dashboard-page">
+
+    <div class="dashboard-layout">
+
+        <!-- Sidebar Navigation -->
+        <aside class="dashboard-sidebar">
+
+            <a href="index.html" class="logo dashboard-logo">
+                <span class="logo-symbol">+</span>
+                Smart<span>Health</span>
+            </a>
+
+            <p class="sidebar-heading">PATIENT PORTAL</p>
+
+            <nav class="sidebar-nav" aria-label="Patient navigation">
+                <a href="dashboard.html" class="active">
+                    Dashboard
+                </a>
+                <a href="add-reading.html">
+                    Add Reading
+                </a>
+
+                <a href="#recent-readings">
+                    Health Records
+                </a>
+
+                <a href="#health-trends">
+                    Health Trends
+                </a>
+
+                <a href="#health-alerts">
+                    Health Alerts
+                </a>
+
+                <a href="consultation.html">
+                    Doctor Consultation
+                </a>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <p>SmartHealth Patient Portal</p>
+                <a href="index.html">Back to Home</a>
+            </div>
+
+        </aside>
+
+        <!-- Dashboard Content -->
+        <main class="dashboard-main">
+            <div class="page-stage page-stage-primary">
+
+            <header class="dashboard-topbar">
+                <div>
+                    <p class="dashboard-eyebrow">PATIENT OVERVIEW</p>
+                    <h1>Health Dashboard</h1>
+                </div>
+
+                <nav class="account-navigation" aria-label="Account navigation">
+                    <div class="dashboard-profile">
+                        <div class="profile-avatar" data-patient-initials aria-hidden="true">?</div>
+                        <div class="profile-details">
+                            <strong data-patient-name>Loading account...</strong>
+                            <small>Patient Account</small>
+                        </div>
+                        <button type="button" class="logout-button" data-logout>Log out</button>
+                    </div>
+                    <p class="account-status" data-account-status role="status" aria-live="polite"></p>
+                </nav>
+            </header>
+
+            <p id="dashboardReadingsStatus" class="dashboard-note" role="status"></p>
+
+            <!-- Welcome -->
+            <section class="welcome-panel">
+                <div>
+                    <h2>Welcome to Your Health Dashboard</h2>
+                    <p>
+                        Review your health readings, explore trends,
+                        and stay informed about changes over time.
+                    </p>
+                </div>
+                <a href="add-reading.html" class="primary-button">
+                    + Add Health Reading
+                </a>
+
+                
+            </section>
+
+            <!-- Vital Sign Cards -->
+            <section class="dashboard-section">
+                <div class="dashboard-section-heading">
+                    <div>
+                        <h2>Health Overview</h2>
+                        <p>Latest saved health readings</p>
+                    </div>
+                </div>
+
+                
+<div class="vitals-grid">
+
+    <article class="vital-card">
+        <div class="vital-card-top">
+            <span>Heart Rate</span>
+            <span class="vital-symbol">♥</span>
+        </div>
+
+        <h3>
+            <span id="latestHeartRate">--</span>
+            <small>BPM</small>
+        </h3>
+
+        <p>Latest recorded reading</p>
+    </article>
+
+    <article class="vital-card">
+        <div class="vital-card-top">
+            <span>Blood Oxygen (SpO₂)</span>
+            <span class="vital-symbol">O₂</span>
+        </div>
+
+        <h3>
+            <span id="latestSpo2">--</span>
+            <small>%</small>
+        </h3>
+
+        <p>Latest recorded reading</p>
+    </article>
+
+    <article class="vital-card">
+        <div class="vital-card-top">
+            <span>Blood Pressure</span>
+            <span class="vital-symbol">BP</span>
+        </div>
+
+        <h3>
+            <span id="latestBloodPressure">--/--</span>
+            <small>mmHg</small>
+        </h3>
+
+        <p>Latest recorded reading</p>
+    </article>
+
+    <article class="vital-card">
+        <div class="vital-card-top">
+            <span>Body Temperature</span>
+            <span class="vital-symbol">°C</span>
+        </div>
+
+        <h3>
+            <span id="latestTemperature">--</span>
+            <small>°C</small>
+        </h3>
+
+        <p>Latest recorded reading</p>
+    </article>
+
+</div>
+
+            </section>
+
+            <!-- Health Trends -->
+            </div>
+
+            <section class="dashboard-section page-stage" id="health-trends">
+
+                <div class="dashboard-section-heading">
+                    <div>
+                        <h2>Seven-Day Health Trends</h2>
+                        <p>Illustrative changes in recorded measurements</p>
+                    </div>
+
+                    <label class="chart-control">
+                        Measurement
+                        <select id="healthMetric">
+                            <option value="heart_rate">Heart Rate</option>
+                            <option value="spo2">Blood Oxygen</option>
+                            <option value="systolic">Systolic BP</option>
+                            <option value="diastolic">Diastolic BP</option>
+                            <option value="temperature">Temperature</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="dashboard-panel">
+                    <div id="healthTrendChart"
+                         class="health-trend-chart"
+                         aria-label="Seven-day health trend chart">
+                    </div>
+
+                    <p class="dashboard-note" id="chartNote">
+                    Add health readings to view your trends.
+                    </p>
+                </div>
+            </section>
+
+            <!-- Health Records -->
+            <section class="dashboard-section page-stage" id="recent-readings">
+
+                <div class="dashboard-section-heading">
+                    <div>
+                        <h2>Recent Health Readings</h2>
+                        <p>Your saved health history</p>
+                    </div>
+                </div>
+
+                <div class="dashboard-panel table-panel">
+                    <div class="table-scroll">
+                        <table class="health-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Heart Rate</th>
+                                    <th>SpO₂</th>
+                                    <th>Blood Pressure</th>
+                                    <th>Temperature</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="readingsTableBody"></tbody>
+                        </table>
+                        <p id="dashboardEmptyMessage" class="empty-readings" hidden>
+                             No readings available. Add your first health reading.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            
+<!-- Health Alerts -->
+<div class="page-stage">
+<section class="dashboard-section" id="health-alerts">
+
+    <div class="dashboard-section-heading">
+        <div>
+            <h2>Health Alerts</h2>
+            <p>
+                Rule-based analysis of the latest saved reading
+            </p>
+        </div>
+
+    </div>
+
+    <div class="dashboard-panel">
+
+        <div class="alert-section-header">
+            <div>
+                <h3>Early Alert Analysis</h3>
+                <p id="alertSummary">
+                    Checking saved health readings...
+                </p>
+            </div>
+        </div>
+
+        <div id="alertsContainer"
+             class="alerts-container"
+             aria-live="polite">
+        </div>
+
+        <p class="alert-disclaimer">
+            Demonstration only. These alerts do not provide
+            a medical diagnosis or confirm that a reading
+            is safe. For medical concerns, seek advice from
+            a qualified healthcare professional.
+        </p>
+
+    </div>
+
+</section>
+
+
+            <!-- Doctor Consultation -->
+            <section class="dashboard-section" id="consultation">
+                <div class="consultation-panel">
+                    <div>
+                        <h2>Need to Consult a Doctor?</h2>
+                        <p>
+                            You can choose to seek professional
+                            medical advice whenever you feel
+                            a consultation is necessary.
+                        </p>
+                        <a href="consultation.html" class="primary-button">
+                                Explore Doctor Consultation
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            </div>
+
+            <footer class="dashboard-footer">
+                SmartHealth | Academic Project Demo
+            </footer>
+
+        </main>
+    </div>
+
+    <script src="/assets/js/notifications.js"></script>
+    <script src="/assets/js/health-readings.js"></script>
+    <script src="/assets/js/alerts.js"></script>
+<script src="/assets/js/dashboard.js"></script>
+    <script src="/assets/js/session.js"></script>
+</body>
+</html>

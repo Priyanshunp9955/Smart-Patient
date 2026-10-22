@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Notification browser checks</title>
+<pre id="results">RUNNING</pre>
+<script>
+"use strict";
+(async () => {
+    const fixtures = await fetch("/fixtures.json").then(response => response.json());
+    const results = [];
+    const runtimeErrors = [];
+    const pause = (ms = 20) => new Promise(resolve => setTimeout(resolve, ms));
+    const assert = (condition, message) => { if (!condition) throw new Error(message); };
+    async function waitFor(condition) {
+        for (let attempt = 0; attempt < 200; attempt++) {
+            if (condition()) return;
+            await pause();
+        }
+        throw new Error("Timed out waiting for feedback");
+    }
+    async function setup(page = "register", options = {}) {
+        const frame = document.createElement("iframe");
+        frame.style.cssText = `width:${options.width || 1100}px;height:850px;border:0;display:block`;
+        const loaded = new Promise(resolve => { frame.onload = resolve; });
+        frame.srcdoc = fixtures.pages[page].replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "");
+        document.body.appendChild(frame);
+        await loaded;
+        const win = frame.contentWindow;
+        win.sessionStorage.clear();
+        win.localStorage.clear();
+        win.addEventListener("error", event => runtimeErrors.push(event.message));
+        win.addEventListener("unhandledrejection", event => runtimeErrors.push(String(event.reason)));
+        const calls = [];
+        win.fetch = async (url, init = {}) => {
+            calls.push({ url, ...init });
+            if (options.fetch) return options.fetch(url, init);
+            return { ok: true, status: 200, json: async () => ({
+                status: "success", message: "Registration successful", readings: [],
+                patient: { id: 7, full_name: "Test Patient" }
+            }) };
+        };
+        const scripts = {
+            register: ["script.js"], login: ["script.js"],
+            "add-reading": ["health-readings.js", "add-reading.js"], consultation: ["consultation.js"],
+            dashboard: ["session.js"]
+        };
+        for (const script of ["notifications.js", ...(options.apiOnly ? [] : scripts[page])]) {
+            win.eval(fixtures.scripts[script]);
+        }
+        return { frame, win, calls, query: selector => frame.contentDocument.querySelector(selector) };
+    }
+    function fill(context, values) {
+        for (const [id, value] of Object.entries(values)) context.query("#" + id).value = value;
+    }
+    function register(context) {
+        fill(context, { fullName: "Test Patient", registerEmail: "test@example.com", registerPassword: "password1", confirmPassword: "password1" });
+    }
+    function reading(context) {
+        fill(context, { heartRate: "72", spo2: "98", systolic: "120", diastolic: "80", temperature: "36.5", readingDate: "2020-01-02T10:30" });
+    }
+    async function check(label, test) {
+        try { await test(); results.push("PASS " + label); }
+        catch (error) { results.push("FAIL " + label + ": " + error.message); }
+        document.querySelectorAll("iframe").forEach(frame => frame.remove());
+    }
+
+    await check("Registration redirects to login with the email and success popup", async () => {
+        const context = await setup();
+        register(context);
+        context.query("#registerEmail").value = "Test@Example.com";
+        context.query("#registerForm").requestSubmit();
+        await waitFor(() => context.frame.contentWindow.location.pathname === "/login.html" && context.query(".notification-success") && context.query("#loginEmail")?.value === "test@example.com");
+        assert(context.query(".notification-title").textContent === "Account created", "Incorrect success title");
+        assert(context.query(".notification-message").textContent === "Registration successful", "Missing server message");
+        assert(context.query("#loginPassword").value === "", "Password was transferred between pages");
+        assert(!context.frame.contentWindow.sessionStorage.getItem("smarthealth_registered_email"), "Prefill was not consumed");
+        assert(!context.query('[type="submit"]').disabled, "Submit remains disabled");
+    });
+    await check("Registration stores no password and prefills email only once", async () => {
+        const context = await setup();
+        const writes = [];
+        const originalSetItem = context.win.Storage.prototype.setItem;
+        context.win.Storage.prototype.setItem = function (key, value) {
+            writes.push(String(value));
+            return originalSetItem.call(this, key, value);
+        };
+        register(context);
+        context.query("#registerForm").requestSubmit();
+        await waitFor(() => context.frame.contentWindow.location.pathname === "/login.html" && context.query("#loginEmail")?.value === "test@example.com");
+        assert(writes.length > 0 && writes.every(value => !value.includes("password1")), "Password written to browser storage");
+        const loginDocument = context.frame.contentDocument;
+        context.frame.contentWindow.location.reload();
+        await waitFor(() => context.frame.contentDocument !== loginDocument && context.query("#loginEmail"));
+        assert(context.query("#loginEmail").value === "", "A later login reused an old registration email");
+    });
+    await check("Duplicate account displays the backend error", async () => {
+        const context = await setup("register", { fetch: async () => ({ ok: false, json: async () => ({ status: "error", message: "Email already registered" }) }) });
+        register(context);
+        context.query("#registerForm").requestSubmit();
+        await waitFor(() => context.query(".notification-error"));
+        assert(context.query(".notification-message").textContent === "Email already registered", "Missing duplicate email message");
+        assert(context.query("#registerEmail").value === "test@example.com", "Error erased form values");
+        assert(context.frame.contentWindow.location.pathname !== "/login.html", "Failed registration redirected to login");
+        assert(!context.win.sessionStorage.getItem("smarthealth_registered_email"), "Failed registration stored an email for login");
+    });
+    await check("Password mismatch shows an error without submitting", async () => {
+        const context = await setup();
+        register(context);
+        context.query("#confirmPassword").value = "different-password";
+        context.query("#registerForm").requestSubmit();
+        assert(context.query(".notification-message").textContent === "Passwords do not match.", "Mismatch not reported");
+        assert(context.calls.length === 0, "Invalid registration was submitted");
+    });
+    await check("Required-field validation shows one popup", async () => {
+        const context = await setup();
+        context.query("#registerForm").requestSubmit();
+        assert(context.query(".notification-title").textContent === "Check your details", "Native validation not reported");
+        assert(context.frame.contentDocument.querySelectorAll(".notification-card").length === 1, "Too many validation popups");
+        assert(context.calls.length === 0, "Invalid form submitted");
+    });
+    await check("Connection failures show a readable error", async () => {
+        const context = await setup("register", { fetch: async () => { throw new Error("Offline"); } });
+        register(context);
+        context.query("#registerForm").requestSubmit();
+        await waitFor(() => context.query(".notification-error"));
+        assert(context.query(".notification-message").textContent.includes("Unable to connect"), "Connection error missing");
+    });
+    await check("Invalid login shows an error card", async () => {
+        const context = await setup("login", { fetch: async () => ({ ok: false, json: async () => ({ status: "error", message: "Invalid email or password" }) }) });
+        fill(context, { loginEmail: "test@example.com", loginPassword: "bad-password" });
+        context.query("#loginForm").requestSubmit();
+        await waitFor(() => context.query(".notification-error"));
+        assert(context.query(".notification-message").textContent === "Invalid email or password", "Login error missing");
+    });
+    await check("Login success appears after redirect to the dashboard", async () => {
+        const context = await setup("login");
+        fill(context, { loginEmail: "test@example.com", loginPassword: "password1" });
+        context.query("#loginForm").requestSubmit();
+        await waitFor(() => context.frame.contentWindow.location.pathname === "/dashboard.html" && context.query(".notification-success"));
+        assert(context.query(".notification-title").textContent === "Signed in", "Redirect lost success notification");
+        assert(!context.frame.contentWindow.sessionStorage.getItem("smarthealth_notification"), "Redirect notification was not consumed");
+    });
+    await check("Logout success appears after redirect to login", async () => {
+        const context = await setup("dashboard");
+        await waitFor(() => context.query("[data-patient-name]").textContent === "Test Patient");
+        context.query("[data-logout]").click();
+        await waitFor(() => context.frame.contentWindow.location.pathname === "/login.html" && context.query(".notification-success"));
+        assert(context.query(".notification-title").textContent === "Signed out", "Logout success missing");
+    });
+    await check("Logout failure keeps the session and shows a popup", async () => {
+        const context = await setup("dashboard", { fetch: async url => url === "/api/logout" ? { ok: false } : { ok: true, status: 200, json: async () => ({ patient: { full_name: "Test Patient" } }) } });
+        await waitFor(() => context.query("[data-patient-name]").textContent === "Test Patient");
+        context.query("[data-logout]").click();
+        await waitFor(() => context.query(".notification-error"));
+        assert(!context.query("[data-logout]").disabled, "Logout retry disabled");
+    });
+    await check("Saving a health reading shows success", async () => {
+        const context = await setup("add-reading");
+        await pause();
+        reading(context);
+        context.query("#healthReadingForm").requestSubmit();
+        await waitFor(() => context.query(".notification-success"));
+        assert(context.query(".notification-message").textContent.includes("saved successfully"), "Reading success missing");
+    });
+    await check("Invalid blood pressure shows an error before saving", async () => {
+        const context = await setup("add-reading");
+        await pause();
+        reading(context);
+        context.query("#systolic").value = "70";
+        context.query("#healthReadingForm").requestSubmit();
+        assert(context.query(".notification-error"), "Reading validation popup missing");
+        assert(!context.calls.some(call => call.method === "POST"), "Invalid reading submitted");
+    });
+    await check("Saving an appointment request shows success", async () => {
+        const context = await setup("consultation");
+        const date = new Date();
+        date.setDate(date.getDate() + 2);
+        const localDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+        fill(context, { patientName: "Test Patient", patientEmail: "test@example.com", doctorSelect: "doctor-1", consultationMode: "Video", appointmentDate: localDate, appointmentTime: "12:00", consultationReason: "Test request" });
+        context.query("#appointmentForm").requestSubmit();
+        assert(context.query(".notification-success"), "Appointment success missing");
+    });
+    await check("Messages are displayed as text and can be dismissed", async () => {
+        const context = await setup("register", { apiOnly: true });
+        const text = '<img src=x onerror="alert(1)">';
+        context.win.SmartHealth.notify(text, "error");
+        assert(context.query(".notification-message").textContent === text && !context.query(".notification-message img"), "Message interpreted as HTML");
+        assert(context.query(".notification-card").getAttribute("role") === "alert", "Error not announced accessibly");
+        context.query(".notification-close").click();
+        assert(!context.query(".notification-card"), "Dismiss failed");
+    });
+    await check("Repeated errors do not create duplicate cards", async () => {
+        const context = await setup("register", { apiOnly: true });
+        context.win.SmartHealth.notify("Try again", "error");
+        context.win.SmartHealth.notify("Try again", "error");
+        assert(context.frame.contentDocument.querySelectorAll(".notification-card").length === 1, "Duplicate popup");
+    });
+    await check("Popup stack stays bounded and supports other message types", async () => {
+        const context = await setup("register", { apiOnly: true });
+        ["success", "error", "warning", "info"].forEach(type => context.win.SmartHealth.notify(type, type));
+        assert(context.frame.contentDocument.querySelectorAll(".notification-card").length === 3, "Popup stack exceeded limit");
+        assert(context.query(".notification-warning") && context.query(".notification-info"), "Message type missing");
+    });
+    await check("Success dismisses automatically while errors stay visible", async () => {
+        const context = await setup("register", { apiOnly: true });
+        context.win.SmartHealth.notify("Saved", "success");
+        context.win.SmartHealth.notify("Try again", "error");
+        await pause(6100);
+        assert(!context.query(".notification-success"), "Success did not dismiss");
+        assert(context.query(".notification-error"), "Error disappeared automatically");
+    });
+    await check("Popup fits a small mobile screen", async () => {
+        const context = await setup("register", { apiOnly: true, width: 320 });
+        context.win.SmartHealth.notify("A long message with " + "longtext".repeat(35), "error");
+        await pause(250);
+        const card = context.query(".notification-card").getBoundingClientRect();
+        assert(card.left >= 0 && card.right <= 320, "Popup exceeds screen width");
+        assert(context.query(".notification-close").getBoundingClientRect().right <= 320, "Close button outside screen");
+    });
+    await check("No unexpected JavaScript errors", async () => {
+        assert(runtimeErrors.length === 0, runtimeErrors.join("; "));
+    });
+    document.querySelector("#results").textContent = results.join("\n") + "\nDONE";
+})().catch(error => { document.querySelector("#results").textContent = "FAIL " + error.stack; });
+</script>
+</html>

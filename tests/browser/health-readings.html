@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Health record synchronization checks</title>
+<pre id="results">RUNNING</pre>
+<script>
+"use strict";
+(async () => {
+    const fixtures = await fetch("/fixtures.json").then(response => response.json());
+    const results = [];
+    const runtimeErrors = [];
+    const pause = (ms = 20) => new Promise(resolve => setTimeout(resolve, ms));
+    function assert(condition, message) { if (!condition) throw new Error(message); }
+    async function waitFor(condition) {
+        for (let attempt = 0; attempt < 200; attempt++) {
+            if (condition()) return;
+            await pause();
+        }
+        throw new Error("Timed out waiting for updated health records");
+    }
+    const row = (changes = {}) => ({ id: 1, heart_rate: 72, spo2: 98, systolic: 120, diastolic: 80, temperature: 36.5, measured_at: "2020-01-02T10:30", ...changes });
+    function database(rows = []) {
+        const state = { rows, calls: [], fail: false, failSave: false };
+        state.fetch = async (url, options = {}) => {
+            assert(url === "/api/readings", "Unexpected endpoint: " + url);
+            state.calls.push({ url, ...options });
+            if (state.fail || (options.method === "POST" && state.failSave)) {
+                return { ok: false, status: 503, json: async () => ({ status: "error", message: "Unable to load health records. Please try again." }) };
+            }
+            if (options.method === "POST") {
+                const id = Math.max(0, ...state.rows.map(item => item.id)) + 1;
+                state.rows.push(row({ ...JSON.parse(options.body), id }));
+                return { ok: true, status: 201, json: async () => ({ status: "success", reading_id: id }) };
+            }
+            const snapshot = state.rows.map(item => ({ ...item }));
+            return { ok: true, status: 200, json: async () => ({ status: "success", readings: snapshot }) };
+        };
+        return state;
+    }
+    async function setup(page, state, options = {}) {
+        const frame = document.createElement("iframe");
+        frame.style.cssText = "width:1100px;height:850px;border:0;display:block";
+        const loaded = new Promise(resolve => { frame.onload = resolve; });
+        frame.srcdoc = fixtures.pages[page].replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "");
+        document.body.appendChild(frame);
+        await loaded;
+        const win = frame.contentWindow;
+        win.sessionStorage.clear();
+        win.localStorage.clear();
+        // A stale browser dataset must never become the source for patient records.
+        win.localStorage.setItem("smarthealth_demo_readings", JSON.stringify([{ date: "2025-01-01T10:00", heartRate: 999, spo2: 1, systolic: 999, diastolic: 999, temperature: 99 }]));
+        win.addEventListener("error", event => runtimeErrors.push(event.message));
+        win.addEventListener("unhandledrejection", event => runtimeErrors.push(String(event.reason)));
+        win.fetch = options.fetch || state.fetch;
+        const charts = [];
+        if (!options.noPlotly) {
+            win.Plotly = {
+                purge(element) { element.replaceChildren(); },
+                react(element, data) { charts.push(data); }
+            };
+        }
+        for (const script of ["notifications.js", "health-readings.js", ...(page === "dashboard" ? ["alerts.js", "dashboard.js"] : ["add-reading.js"])]) {
+            win.eval(fixtures.scripts[script]);
+        }
+        return { frame, win, charts, query: selector => frame.contentDocument.querySelector(selector) };
+    }
+    function submitReading(context, values = {}) {
+        const fields = { heartRate: "85", spo2: "97", systolic: "125", diastolic: "82", temperature: "36.7", readingDate: "2020-01-03T11:00", ...values };
+        for (const [id, value] of Object.entries(fields)) context.query("#" + id).value = value;
+        context.query("#healthReadingForm").requestSubmit();
+    }
+    async function check(label, test) {
+        try { await test(); results.push("PASS " + label); }
+        catch (error) { results.push("FAIL " + label + ": " + error.message); }
+        document.querySelectorAll("iframe").forEach(frame => frame.remove());
+    }
+
+    await check("Dashboard loads saved API records instead of old browser data", async () => {
+        const state = database([row()]);
+        const context = await setup("dashboard", state);
+        await waitFor(() => context.query("#latestHeartRate").textContent === "72");
+        assert(context.query("#latestSpo2").textContent === "98", "Oxygen card incorrect");
+        assert(context.query("#latestBloodPressure").textContent === "120/80", "Blood pressure card incorrect");
+        assert(context.query("#latestTemperature").textContent === "36.5", "Temperature card incorrect");
+        assert(context.query("#readingsTableBody tr").textContent.includes("72 BPM"), "History missing API record");
+        assert(state.calls[0].cache === "no-store" && state.calls[0].credentials === "same-origin", "Request must fetch uncached signed-in data");
+    });
+    await check("Saving a record refreshes the reading list and an open dashboard", async () => {
+        const state = database([row()]);
+        const dashboard = await setup("dashboard", state);
+        await waitFor(() => dashboard.query("#latestHeartRate").textContent === "72");
+        const form = await setup("add-reading", state);
+        await waitFor(() => form.query("#savedReadingsBody tr"));
+        submitReading(form);
+        await waitFor(() => form.query("#savedReadingsBody tr").textContent.includes("85 BPM"));
+        await waitFor(() => dashboard.query("#latestHeartRate").textContent === "85");
+        assert(dashboard.query("#readingsTableBody tr").textContent.includes("85 BPM"), "Dashboard table did not refresh");
+        assert(dashboard.charts.at(-1)[0].y.at(-1) === 85, "Chart did not refresh");
+    });
+    await check("Opening the dashboard after a save loads the new record", async () => {
+        const state = database();
+        const form = await setup("add-reading", state);
+        submitReading(form);
+        await waitFor(() => form.query(".notification-success"));
+        const dashboard = await setup("dashboard", state);
+        await waitFor(() => dashboard.query("#latestHeartRate").textContent === "85");
+        assert(dashboard.query("#readingsTableBody tr").textContent.includes("2020-01-03 11:00"), "Saved date missing");
+    });
+    await check("Returning with browser Back reloads both reading pages", async () => {
+        const state = database([row()]);
+        const dashboard = await setup("dashboard", state);
+        const form = await setup("add-reading", state);
+        await waitFor(() => dashboard.query("#latestHeartRate").textContent === "72" && form.query("#savedReadingsBody tr"));
+        state.rows.push(row({ id: 2, heart_rate: 90, measured_at: "2020-01-03T11:00" }));
+        for (const context of [dashboard, form]) {
+            context.win.dispatchEvent(new context.win.PageTransitionEvent("pageshow", { persisted: true }));
+        }
+        await waitFor(() => dashboard.query("#latestHeartRate").textContent === "90" && form.query("#savedReadingsBody tr").textContent.includes("90 BPM"));
+    });
+    await check("Refocusing a page refreshes records changed elsewhere", async () => {
+        const state = database([row()]);
+        const context = await setup("dashboard", state);
+        await waitFor(() => context.query("#latestHeartRate").textContent === "72");
+        state.rows = [row({ heart_rate: 88 })];
+        context.win.dispatchEvent(new context.win.Event("focus"));
+        await waitFor(() => context.query("#latestHeartRate").textContent === "88");
+    });
+    await check("Latest cards and histories use measurement time and ID consistently", async () => {
+        const state = database([
+            row({ id: 9, heart_rate: 99, measured_at: "2020-01-01T10:00" }),
+            row({ id: 2, heart_rate: 82 }), row({ id: 3, heart_rate: 83 })
+        ]);
+        const dashboard = await setup("dashboard", state);
+        const form = await setup("add-reading", state);
+        await waitFor(() => dashboard.query("#latestHeartRate").textContent === "83" && form.query("#savedReadingsBody tr"));
+        assert(dashboard.query("#readingsTableBody tr").textContent.includes("83 BPM"), "Dashboard order incorrect");
+        assert(form.query("#savedReadingsBody tr").textContent.includes("83 BPM"), "Reading list order differs");
+    });
+    await check("Trends use chronological API data and update for the selected metric", async () => {
+        const state = database([
+            row({ id: 1, measured_at: "2020-01-01T10:30" }),
+            row({ id: 2, heart_rate: 80, spo2: 97, measured_at: "2020-01-09T10:30" }),
+            row({ id: 3, heart_rate: 90, spo2: 96, measured_at: "2020-01-10T10:30" })
+        ]);
+        const context = await setup("dashboard", state);
+        await waitFor(() => context.charts.length > 0);
+        assert(JSON.stringify(context.charts.at(-1)[0].y) === "[80,90]", "Heart rate trend order or date window incorrect");
+        const metric = context.query("#healthMetric");
+        metric.value = "spo2";
+        metric.dispatchEvent(new context.win.Event("change"));
+        assert(JSON.stringify(context.charts.at(-1)[0].y) === "[97,96]", "Selected trend uses stale data");
+    });
+    await check("Alerts use the newest saved API record including heart rate", async () => {
+        const state = database([row(), row({ id: 2, heart_rate: 115, spo2: 94, measured_at: "2020-01-03T10:30" })]);
+        const context = await setup("dashboard", state);
+        await waitFor(() => context.query("#latestHeartRate").textContent === "115");
+        assert(context.frame.contentDocument.querySelectorAll(".health-alert-card").length === 2, "Alerts did not use saved values");
+        assert(context.query("#alertsContainer").textContent.includes("115 BPM"), "Heart rate API field not analyzed");
+    });
+    await check("An empty current account clears old values and browser demo records", async () => {
+        const state = database([row()]);
+        const context = await setup("dashboard", state);
+        await waitFor(() => context.query("#latestHeartRate").textContent === "72");
+        state.rows = [];
+        context.win.dispatchEvent(new context.win.Event("focus"));
+        await waitFor(() => context.query("#latestHeartRate").textContent === "--");
+        assert(!context.query("#readingsTableBody tr"), "Old patient rows remain visible");
+        assert(!context.query("#dashboardEmptyMessage").hidden, "Empty state hidden");
+        assert(!context.query(".health-alert-card"), "Old patient alerts remain visible");
+    });
+    await check("Account changes display only the current API patient's data", async () => {
+        const state = database([row({ heart_rate: 75 })]);
+        const context = await setup("dashboard", state);
+        await waitFor(() => context.query("#latestHeartRate").textContent === "75");
+        state.rows = [row({ id: 20, heart_rate: 64 })];
+        context.win.dispatchEvent(new context.win.Event("focus"));
+        await waitFor(() => context.query("#latestHeartRate").textContent === "64");
+        assert(!context.query("#readingsTableBody").textContent.includes("75 BPM"), "Another account's readings remain visible");
+    });
+    await check("Failed fetches show an error and recover on refresh", async () => {
+        const state = database([row()]);
+        state.fail = true;
+        const context = await setup("dashboard", state);
+        await waitFor(() => context.query(".notification-error"));
+        assert(context.query("#latestHeartRate").textContent === "--", "Failed fetch displayed readings");
+        assert(context.query("#dashboardEmptyMessage").textContent.includes("could not be loaded"), "Failed fetch shown as empty history");
+        state.fail = false;
+        context.win.dispatchEvent(new context.win.Event("focus"));
+        await waitFor(() => context.query("#latestHeartRate").textContent === "72");
+        assert(context.query("#dashboardReadingsStatus").textContent === "", "Load error did not clear");
+    });
+    await check("A slow old fetch cannot replace newer dashboard data", async () => {
+        const state = database();
+        const requests = [];
+        const context = await setup("dashboard", state, { fetch: () => new Promise(resolve => requests.push(resolve)) });
+        await waitFor(() => requests.length === 1);
+        context.win.dispatchEvent(new context.win.Event("focus"));
+        await waitFor(() => requests.length === 2);
+        const response = rows => ({ ok: true, status: 200, json: async () => ({ status: "success", readings: rows }) });
+        requests[1](response([row({ heart_rate: 92 })]));
+        await waitFor(() => context.query("#latestHeartRate").textContent === "92");
+        requests[0](response([row({ heart_rate: 61 })]));
+        await pause(100);
+        assert(context.query("#latestHeartRate").textContent === "92", "Stale response overwrote the latest fetch");
+    });
+    await check("Cards and history still update if the external chart library is unavailable", async () => {
+        const context = await setup("dashboard", database([row()]), { noPlotly: true });
+        await waitFor(() => context.query("#latestHeartRate").textContent === "72");
+        assert(context.query("#readingsTableBody tr"), "Chart failure stopped history rendering");
+        assert(context.query("#chartNote").textContent.includes("could not load"), "Chart unavailable message missing");
+    });
+    await check("A failed save preserves the form and does not change dashboard readings", async () => {
+        const state = database([row()]);
+        state.failSave = true;
+        const dashboard = await setup("dashboard", state);
+        const form = await setup("add-reading", state);
+        await waitFor(() => dashboard.query("#latestHeartRate").textContent === "72");
+        submitReading(form);
+        await waitFor(() => form.query(".notification-error"));
+        assert(form.query("#heartRate").value === "85", "Failed save erased entered data");
+        assert(dashboard.query("#latestHeartRate").textContent === "72" && state.rows.length === 1, "Failed save changed recorded data");
+    });
+    await check("No unexpected JavaScript errors", async () => {
+        assert(runtimeErrors.length === 0, runtimeErrors.join("; "));
+    });
+    document.querySelector("#results").textContent = results.join("\n") + "\nDONE";
+})().catch(error => { document.querySelector("#results").textContent = "FAIL " + error.stack; });
+</script>
+</html>

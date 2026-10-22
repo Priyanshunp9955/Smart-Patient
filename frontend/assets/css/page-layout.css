@@ -1,0 +1,23 @@
+/* Keep each patient task in its own viewport-sized section. */
+
+.dashboard-main {
+    --page-block-padding: 32px;
+}
+
+.dashboard-main > .page-stage {
+    display: flow-root;
+    min-height: 100vh;
+    min-height: 100dvh;
+    margin-bottom: var(--page-block-padding);
+}
+
+.dashboard-main > .page-stage-primary {
+    min-height: calc(100vh - 2 * var(--page-block-padding));
+    min-height: calc(100dvh - 2 * var(--page-block-padding));
+}
+
+@media (max-width: 900px) {
+    .dashboard-main {
+        --page-block-padding: 24px;
+    }
+}

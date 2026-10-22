@@ -1,0 +1,279 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Consultation | SmartHealth</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <link rel="stylesheet" href="/assets/css/page-layout.css">
+    <link rel="stylesheet" href="/assets/css/notifications.css">
+</head>
+
+<body class="dashboard-page">
+
+<div class="dashboard-layout">
+
+    <!-- Sidebar -->
+    <aside class="dashboard-sidebar">
+        <a href="index.html" class="logo dashboard-logo">
+            <span class="logo-symbol">+</span>
+            Smart<span>Health</span>
+        </a>
+
+        <p class="sidebar-heading">PATIENT PORTAL</p>
+
+        <nav class="sidebar-nav" aria-label="Patient navigation">
+            <a href="dashboard.html">Dashboard</a>
+            <a href="add-reading.html">Add Reading</a>
+            <a href="dashboard.html#recent-readings">Health Records</a>
+            <a href="dashboard.html#health-trends">Health Trends</a>
+            <a href="dashboard.html#health-alerts">Health Alerts</a>
+            <a href="consultation.html" class="active">
+                Doctor Consultation
+            </a>
+        </nav>
+
+        <div class="sidebar-bottom">
+            <p>SmartHealth Patient Portal</p>
+            <a href="dashboard.html">Back to Dashboard</a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="dashboard-main">
+            <div class="page-stage page-stage-primary">
+
+        <header class="dashboard-topbar">
+            <div>
+                <p class="dashboard-eyebrow">PATIENT PORTAL</p>
+                <h1>Doctor Consultation</h1>
+            </div>
+            <nav class="account-navigation" aria-label="Account navigation">
+                    <div class="dashboard-profile">
+                        <div class="profile-avatar" data-patient-initials aria-hidden="true">?</div>
+                        <div class="profile-details">
+                            <strong data-patient-name>Loading account...</strong>
+                            <small>Patient Account</small>
+                        </div>
+                        <button type="button" class="logout-button" data-logout>Log out</button>
+                    </div>
+                    <p class="account-status" data-account-status role="status" aria-live="polite"></p>
+                </nav>
+        </header>
+
+        <section class="consultation-intro">
+            <h2>Connect With a Healthcare Professional</h2>
+            <p>
+                Choose a doctor and request an appointment whenever
+                you feel professional medical advice is needed.
+            </p>
+        </section>
+
+        <!-- Doctor Listing -->
+        <section class="dashboard-section">
+            <div class="dashboard-section-heading">
+                <div>
+                    <h2>Available Doctor Profiles</h2>
+                    <p>Illustrative profiles for academic demonstration</p>
+                </div>
+            </div>
+
+            <div class="doctor-grid">
+
+                <article class="doctor-card">
+                    <div class="doctor-avatar">AS</div>
+                    <h3>Dr. Ananya Sharma</h3>
+                    <p class="doctor-specialty">General Physician</p>
+                    <p class="doctor-description">
+                        General health concerns and routine consultations.
+                    </p>
+                    <button type="button"
+                            class="doctor-select-btn"
+                            data-doctor="doctor-1">
+                        Request Appointment
+                    </button>
+                </article>
+
+                <article class="doctor-card">
+                    <div class="doctor-avatar">RM</div>
+                    <h3>Dr. Rahul Mehta</h3>
+                    <p class="doctor-specialty">Cardiology</p>
+                    <p class="doctor-description">
+                        Consultations related to heart health.
+                    </p>
+                    <button type="button"
+                            class="doctor-select-btn"
+                            data-doctor="doctor-2">
+                        Request Appointment
+                    </button>
+                </article>
+
+                <article class="doctor-card">
+                    <div class="doctor-avatar">SP</div>
+                    <h3>Dr. Sneha Patel</h3>
+                    <p class="doctor-specialty">Internal Medicine</p>
+                    <p class="doctor-description">
+                        General adult health and medical concerns.
+                    </p>
+                    <button type="button"
+                            class="doctor-select-btn"
+                            data-doctor="doctor-3">
+                        Request Appointment
+                    </button>
+                </article>
+
+            </div>
+        </section>
+
+            </div>
+
+        <!-- Appointment Form -->
+        <section class="dashboard-section page-stage" id="appointment-form">
+            <div class="reading-form-card">
+
+                <div class="reading-form-heading">
+                    <h2>Request an Appointment</h2>
+                    <p>Complete the form using fictional demo details.</p>
+                </div>
+
+                <form id="appointmentForm">
+
+                    <div class="reading-form-grid">
+
+                        <div class="form-group">
+                            <label for="patientName">Patient Name *</label>
+                            <input type="text" id="patientName"
+                                   maxlength="80"
+                                   placeholder="Enter patient name"
+                                   required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="patientEmail">Email Address *</label>
+                            <input type="email" id="patientEmail"
+                                   placeholder="Enter email address"
+                                   required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="doctorSelect">Select Doctor *</label>
+                            <select id="doctorSelect" required>
+                                <option value="">Choose a doctor</option>
+                                <option value="doctor-1">
+                                    Dr. Ananya Sharma
+                                </option>
+                                <option value="doctor-2">
+                                    Dr. Rahul Mehta
+                                </option>
+                                <option value="doctor-3">
+                                    Dr. Sneha Patel
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="consultationMode">
+                                Consultation Mode *
+                            </label>
+                            <select id="consultationMode" required>
+                                <option value="">Choose consultation mode</option>
+                                <option value="Video">Video Consultation</option>
+                                <option value="Audio">Audio Consultation</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="appointmentDate">
+                                Preferred Date *
+                            </label>
+                            <input type="date" id="appointmentDate" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="appointmentTime">
+                                Preferred Time *
+                            </label>
+                            <input type="time" id="appointmentTime" required>
+                        </div>
+
+                        <div class="form-group consultation-full-width">
+                            <label for="consultationReason">
+                                Reason for Consultation *
+                            </label>
+                            <textarea id="consultationReason"
+                                      rows="4"
+                                      maxlength="500"
+                                      placeholder="Briefly describe your concern"
+                                      required></textarea>
+                        </div>
+
+                    </div>
+
+                    <div class="reading-form-actions">
+                        <button type="reset" class="secondary-button">
+                            Clear Form
+                        </button>
+                        <button type="submit" class="auth-submit">
+                            Submit Appointment Request
+                        </button>
+                    </div>
+
+                    <p id="appointmentMessage"
+                       class="form-message"
+                       role="status"></p>
+                </form>
+
+            </div>
+        </section>
+
+        <!-- Appointment History -->
+        <section class="dashboard-section page-stage">
+            <div class="dashboard-section-heading">
+                <div>
+                    <h2>My Appointment Requests</h2>
+                    <p>Requests saved in this browser for demonstration</p>
+                </div>
+            </div>
+
+            <div class="dashboard-panel table-panel">
+                <div class="table-scroll">
+                    <table class="health-table">
+                        <thead>
+                            <tr>
+                                <th>Doctor</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Mode</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="appointmentsTableBody"></tbody>
+                    </table>
+                </div>
+
+                <p id="emptyAppointments" class="empty-readings">
+                    No appointment requests yet.
+                </p>
+            </div>
+        </section>
+
+        <p class="consultation-disclaimer">
+            This is an academic demonstration. Doctor profiles are
+            fictional and appointment requests are not sent to
+            real healthcare professionals. Audio and video calling
+            are not active.
+        </p>
+
+        <footer class="dashboard-footer">
+            SmartHealth | Academic Project Demo
+        </footer>
+
+    </main>
+</div>
+
+    <script src="/assets/js/notifications.js"></script>
+<script src="/assets/js/consultation.js"></script>
+    <script src="/assets/js/session.js"></script>
+</body>
+</html>
