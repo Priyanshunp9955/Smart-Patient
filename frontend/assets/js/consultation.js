@@ -18,6 +18,12 @@ const appointmentMessage = document.getElementById("appointmentMessage");
 const appointmentsTableBody = document.getElementById("appointmentsTableBody");
 const emptyAppointments = document.getElementById("emptyAppointments");
 
+// Keep the initials visible if a locally hosted demo portrait cannot load.
+document.querySelectorAll(".doctor-avatar img").forEach(image => {
+    image.addEventListener("error", () => { image.hidden = true; }, { once: true });
+    if (image.complete && image.naturalWidth === 0) image.hidden = true;
+});
+
 // Return today's date in local time.
 
 function getLocalDate() {
