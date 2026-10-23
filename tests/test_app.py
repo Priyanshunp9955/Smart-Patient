@@ -1,6 +1,7 @@
 """Regression coverage for routes, sessions, assets, and database interactions."""
 
 import os
+import sqlite3
 import unittest
 from datetime import datetime
 from decimal import Decimal
@@ -214,7 +215,45 @@ class ApplicationTests(unittest.TestCase):
         self.assertEqual(response.json["readings"], [{"id": 42, **self.reading}])
         self.assertEqual(self.cursor.execute.call_args.args[1], (7,))
         self.assertIn("ORDER BY measured_at DESC, id DESC", self.cursor.execute.call_args.args[0])
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
         self.assert_closed()
+
+    def test_reading_numeric_serialization_and_unavailable_legacy_values(self):
+        self.login_session()
+        self.cursor.fetchall.return_value = [
+            {"id": 42, **self.reading, "heart_rate": Decimal("120"), "spo2": Decimal("94.50"),
+             "measured_at": datetime(2020, 1, 2, 10, 30)},
+            {"id": 43, **self.reading, "heart_rate": None, "spo2": None,
+             "systolic": None, "diastolic": None, "temperature": None, "measured_at": None},
+            {"id": 44, **self.reading, "heart_rate": "120", "spo2": "NaN",
+             "temperature": "Infinity", "measured_at": datetime(2020, 1, 1, 10, 30)}
+        ]
+        with self.database("readings"):
+            response = self.client.get("/api/readings")
+        self.assertEqual(response.status_code, 200)
+        first, missing, invalid = response.json["readings"]
+        self.assertEqual(first["heart_rate"], 120)
+        self.assertEqual(first["spo2"], 94.5)
+        for field in ("heart_rate", "spo2", "systolic", "diastolic", "temperature"):
+            self.assertIsNone(missing[field])
+        self.assertEqual(missing["measured_at"], "")
+        self.assertEqual(invalid["heart_rate"], 120)
+        self.assertIsNone(invalid["spo2"])
+        self.assertIsNone(invalid["temperature"])
+        self.assert_closed()
+
+    def test_readings_are_scoped_to_each_logged_in_patient(self):
+        for patient_id in (7, 8):
+            with self.subTest(patient_id=patient_id):
+                with self.client.session_transaction() as session:
+                    session["patient_id"] = patient_id
+                self.cursor.fetchall.return_value = []
+                with self.database("readings"):
+                    response = self.client.get("/api/readings")
+                sql, parameters = self.cursor.execute.call_args.args
+                self.assertIn("WHERE patient_id = %s", sql)
+                self.assertEqual(parameters, (patient_id,))
+                self.assertEqual(response.json["readings"], [])
 
     def test_reading_database_errors_and_rollback(self):
         self.login_session()
@@ -225,6 +264,125 @@ class ApplicationTests(unittest.TestCase):
             self.assertEqual(self.client.post("/api/readings", json=self.reading).status_code, 500)
         self.connection.rollback.assert_called_once()
         self.assert_closed()
+
+    def test_delete_requires_login(self):
+        with self.database("readings") as connect:
+            response = self.client.delete("/api/readings/42", json={"confirmed": True},
+                                          headers={"X-SmartHealth-Action": "delete-reading"})
+        self.assertEqual(response.status_code, 401)
+        connect.assert_not_called()
+
+    def test_delete_requires_explicit_confirmation_and_same_origin_request(self):
+        self.login_session()
+        headers = {"X-SmartHealth-Action": "delete-reading"}
+        with self.database("readings") as connect:
+            for data in ({}, {"confirmed": False}, {"confirmed": "true"}, [], None):
+                with self.subTest(data=data):
+                    response = self.client.delete("/api/readings/42", json=data, headers=headers)
+                    self.assertEqual(response.status_code, 400)
+            self.assertEqual(self.client.delete("/api/readings/42", json={"confirmed": True}).status_code, 403)
+            for origin in ("https://untrusted.example", "null"):
+                response = self.client.delete("/api/readings/42", json={"confirmed": True},
+                                              headers={**headers, "Origin": origin})
+                self.assertEqual(response.status_code, 403)
+            response = self.client.delete("/api/readings/42", data='{"confirmed": true}',
+                                          content_type="text/plain", headers=headers)
+            self.assertEqual(response.status_code, 400)
+            connect.assert_not_called()
+
+    def test_delete_scopes_sql_to_session_patient_and_commits(self):
+        self.login_session()
+        self.cursor.rowcount = 1
+        with self.database("readings"):
+            response = self.client.delete("/api/readings/42", json={"confirmed": True, "patient_id": 8},
+                                          headers={"X-SmartHealth-Action": "delete-reading", "Origin": "http://localhost"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json, {"status": "success", "message": "Health reading deleted successfully.", "reading_id": 42})
+        self.cursor.execute.assert_called_once_with(
+            "DELETE FROM health_readings WHERE id = %s AND patient_id = %s", (42, 7))
+        self.connection.commit.assert_called_once()
+        self.connection.rollback.assert_not_called()
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
+        self.assert_closed()
+
+    def test_delete_missing_or_other_patient_reading_returns_not_found(self):
+        self.login_session()
+        self.cursor.rowcount = 0
+        with self.database("readings"):
+            response = self.client.delete("/api/readings/42", json={"confirmed": True},
+                                          headers={"X-SmartHealth-Action": "delete-reading"})
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json["message"], "Health reading not found.")
+        self.cursor.execute.assert_called_once_with(
+            "DELETE FROM health_readings WHERE id = %s AND patient_id = %s", (42, 7))
+        self.connection.commit.assert_not_called()
+        self.connection.rollback.assert_called_once()
+        self.assert_closed()
+
+    def test_delete_invalid_record_ids_and_wrong_methods_do_not_touch_database(self):
+        self.login_session()
+        with self.database("readings") as connect:
+            for reading_id in ("0", "-1", "invalid", "42 OR 1=1"):
+                with self.subTest(reading_id=reading_id):
+                    response = self.client.delete(f"/api/readings/{reading_id}", json={"confirmed": True},
+                                                  headers={"X-SmartHealth-Action": "delete-reading"})
+                    self.assertIn(response.status_code, (404, 405))
+            # The existing frontend catch-all handles unknown GET paths.
+            self.assertEqual(self.client.get("/api/readings/42").status_code, 404)
+            self.assertEqual(self.client.post("/api/readings/42").status_code, 405)
+            connect.assert_not_called()
+
+    def test_delete_query_cannot_remove_another_patients_record(self):
+        self.login_session()
+        # Execute the real parameterized DELETE against an isolated SQL table.
+        # No real patient database is used or modified.
+        database = sqlite3.connect(":memory:")
+        self.addCleanup(database.close)
+        database.execute("CREATE TABLE health_readings (id INTEGER PRIMARY KEY, patient_id INTEGER)")
+        database.executemany("INSERT INTO health_readings VALUES (?, ?)", [(42, 8), (43, 7)])
+        database.commit()
+
+        def execute(sql, parameters):
+            cursor = database.execute(sql.replace("%s", "?"), parameters)
+            self.cursor.rowcount = cursor.rowcount
+
+        self.cursor.execute.side_effect = execute
+        self.connection.commit.side_effect = database.commit
+        self.connection.rollback.side_effect = database.rollback
+        with self.database("readings"):
+            headers = {"X-SmartHealth-Action": "delete-reading"}
+            forbidden = self.client.delete("/api/readings/42", json={"confirmed": True, "patient_id": 8}, headers=headers)
+            self.assertEqual(forbidden.status_code, 404)
+            self.assertEqual(database.execute("SELECT COUNT(*) FROM health_readings").fetchone()[0], 2)
+            allowed = self.client.delete("/api/readings/43", json={"confirmed": True}, headers=headers)
+            self.assertEqual(allowed.status_code, 200)
+            self.assertEqual(database.execute("SELECT id FROM health_readings").fetchall(), [(42,)])
+            repeated = self.client.delete("/api/readings/43", json={"confirmed": True}, headers=headers)
+            self.assertEqual(repeated.status_code, 404)
+            self.assertEqual(database.execute("SELECT id FROM health_readings").fetchall(), [(42,)])
+
+    def test_delete_database_connection_failure(self):
+        self.login_session()
+        with self.database("readings", Error("offline")):
+            response = self.client.delete("/api/readings/42", json={"confirmed": True},
+                                          headers={"X-SmartHealth-Action": "delete-reading"})
+        self.assertEqual(response.status_code, 500)
+        self.assertIn("Unable to delete", response.json["message"])
+
+    def test_delete_database_failure_rolls_back_and_closes(self):
+        self.login_session()
+        for operation in ("execute", "commit"):
+            with self.subTest(operation=operation):
+                self.connection.reset_mock()
+                self.cursor.rowcount = 1
+                self.cursor.execute.side_effect = Error("failed") if operation == "execute" else None
+                self.connection.commit.side_effect = Error("failed") if operation == "commit" else None
+                with self.database("readings"):
+                    response = self.client.delete("/api/readings/42", json={"confirmed": True},
+                                                  headers={"X-SmartHealth-Action": "delete-reading"})
+                self.assertEqual(response.status_code, 500)
+                self.connection.rollback.assert_called_once()
+                self.assert_closed()
 
     def test_validation_rules(self):
         validated = validate_health_reading(self.reading)

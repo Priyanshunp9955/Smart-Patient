@@ -43,15 +43,20 @@ const DEMO_ALERT_RULES = [
 
 // Check one health reading against all demo rules.
 
+function alertNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string") return null;
+    if (typeof value === "string" && value.trim() === "") return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+}
+
 function analyzeHealthReading(reading) {
     const alerts = [];
 
     DEMO_ALERT_RULES.forEach(rule => {
-        const value = reading[rule.field];
+        const value = alertNumericValue(reading?.[rule.field]);
 
-        if (typeof value === "number" &&
-            Number.isFinite(value) &&
-            rule.test(value)) {
+        if (value !== null && rule.test(value)) {
 
             alerts.push({
                 label: rule.label,
@@ -88,7 +93,7 @@ function createAlertCard(alert) {
 
 // Display the alert analysis on the dashboard.
 
-function displayHealthAlerts(readings) {
+function displayHealthAlerts(reading, errorMessage = "") {
     const container = document.getElementById("alertsContainer");
     const summary = document.getElementById("alertSummary");
 
@@ -96,7 +101,16 @@ function displayHealthAlerts(readings) {
 
     container.replaceChildren();
 
-    if (readings.length === 0) {
+    if (errorMessage) {
+        summary.textContent = "Health alerts could not be loaded.";
+        const message = document.createElement("p");
+        message.className = "no-alert-message";
+        message.textContent = errorMessage;
+        container.appendChild(message);
+        return;
+    }
+
+    if (!reading) {
         summary.textContent = "No health readings available.";
 
         const message = document.createElement("p");
@@ -107,9 +121,24 @@ function displayHealthAlerts(readings) {
         return;
     }
 
-    // The shared API service returns the newest measurement first.
-    const latestReading = readings[0];
-    const alerts = analyzeHealthReading(latestReading);
+    const alerts = analyzeHealthReading(reading);
+    const missingFields = DEMO_ALERT_RULES.filter(rule =>
+        alertNumericValue(reading[rule.field]) === null
+    );
+
+    if (missingFields.length > 0) {
+        summary.textContent = alerts.length > 0
+            ? `${alerts.length} demonstration alert(s) matched; some measurements are unavailable.`
+            : "Alert analysis incomplete: measurements are unavailable.";
+        alerts.forEach(alert => container.appendChild(createAlertCard(alert)));
+        const message = document.createElement("p");
+        message.className = "no-alert-message";
+        message.textContent = "Missing or invalid measurements: " +
+            missingFields.map(rule => rule.label).join(", ") +
+            ". Add a complete reading to check all demonstration rules.";
+        container.appendChild(message);
+        return;
+    }
 
     if (alerts.length === 0) {
         summary.textContent = "No demo rules matched.";

@@ -68,6 +68,10 @@ async function displaySavedReadings() {
             );
             createCell(row, `${reading.temperature} °C`);
 
+            const actions = document.createElement("td");
+            actions.appendChild(window.SmartHealth.readings.createDeleteButton(reading));
+            row.appendChild(actions);
+
             savedReadingsBody.appendChild(row);
         });
 

@@ -38,16 +38,16 @@ function updateHealthCards(readings) {
     const latest = readings[0];
 
     document.getElementById("latestHeartRate").textContent =
-        latest.heart_rate;
+        latest.heart_rate ?? "--";
 
     document.getElementById("latestSpo2").textContent =
-        latest.spo2;
+        latest.spo2 ?? "--";
 
     document.getElementById("latestBloodPressure").textContent =
-        `${latest.systolic}/${latest.diastolic}`;
+        `${latest.systolic ?? "--"}/${latest.diastolic ?? "--"}`;
 
     document.getElementById("latestTemperature").textContent =
-        latest.temperature;
+        latest.temperature ?? "--";
 }
 
 // Create safe table cells.
@@ -76,7 +76,7 @@ function renderHealthHistory(readings) {
     recentReadings.forEach(reading => {
         const row = document.createElement("tr");
 
-        addTableCell(row, reading.measured_at.replace("T", " "));
+        addTableCell(row, reading.measured_at?.replace("T", " ") || "--");
         addTableCell(row, `${reading.heart_rate} BPM`);
         addTableCell(row, `${reading.spo2}%`);
         addTableCell(
@@ -84,6 +84,10 @@ function renderHealthHistory(readings) {
             `${reading.systolic}/${reading.diastolic} mmHg`
         );
         addTableCell(row, `${reading.temperature} °C`);
+
+        const actions = document.createElement("td");
+        actions.appendChild(window.SmartHealth.readings.createDeleteButton(reading));
+        row.appendChild(actions);
 
         tableBody.appendChild(row);
     });
@@ -196,10 +200,17 @@ function initializeDashboard() {
     let readings = [];
     let requestId = 0;
 
-    function render() {
+    function render(errorMessage = "") {
         updateHealthCards(readings);
         renderHealthHistory(readings);
-        displayHealthAlerts(readings);
+        // MySQL's auto-increment ID identifies the latest saved record, even
+        // when a patient enters a backdated measurement. Keep history/trends
+        // in their existing measurement-date order.
+        const latestSaved = readings.reduce((latest, reading) =>
+            !latest || Number(reading.id) > Number(latest.id) ? reading : latest,
+            null
+        );
+        displayHealthAlerts(latestSaved, errorMessage);
         if (metricSelect) renderHealthChart(metricSelect.value, readings);
     }
 
@@ -215,12 +226,11 @@ function initializeDashboard() {
         } catch (error) {
             if (currentRequest !== requestId) return;
             readings = [];
-            render();
-            if (error.status === 401) return;
             const message = error.message || "Unable to load your health records. Please try again.";
+            render(message);
+            if (error.status === 401) return;
             status.textContent = message;
             document.getElementById("dashboardEmptyMessage").textContent = "Health records could not be loaded.";
-            document.getElementById("alertSummary").textContent = "Health alerts could not be loaded.";
             document.getElementById("chartNote").textContent = "Health trends could not be loaded.";
             window.SmartHealth.notify(message, "error");
         }

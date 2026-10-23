@@ -83,6 +83,25 @@ page regains focus, when browser Back restores a page, and when another open
 page saves a reading. Cross-tab messages carry only a refresh signal; health
 records are not stored in browser storage.
 
+Health Alerts evaluates the current patient's most recently saved record
+(the highest auto-increment reading ID), including backdated measurements.
+Overview cards, history, and trends retain their measurement-date ordering.
+The five academic demonstration rules remain heart rate > 100 BPM, SpO2 < 95%,
+systolic > 140 mmHg, diastolic > 90 mmHg, and temperature > 38 C.
+Complete readings with no matches show information; unavailable measurements
+show an incomplete-analysis message, and failed API requests clear stale alerts
+and show an error. Alerts are for academic demonstration only.
+
+Both saved-reading tables have an Actions column. Delete opens a browser
+confirmation identifying the reading ID and measurement date; cancelling sends
+no request. Confirmed deletion calls `DELETE /api/readings/<reading_id>` with
+JSON `{ "confirmed": true }` and `X-SmartHealth-Action: delete-reading`.
+The route requires a signed-in session, rejects cross-origin requests, and
+deletes only when both the record ID and session patient ID match. Missing or
+other-patient IDs return the same 404 response. Successful deletion refreshes
+the current page and other open reading pages through the existing refresh
+signals, including cards, history, trends, and demonstration alerts.
+
 ## Checks
 
 ```powershell
