@@ -40,7 +40,7 @@
         catch (error) { results.push("FAIL " + label + ": " + error.message); }
         document.querySelectorAll("iframe").forEach(frame => frame.remove());
     }
-    for (const [path, label] of [["/dashboard.html", "Dashboard"], ["/add-reading.html", "Add Reading"], ["/consultation.html", "Doctor Consultation"], ["/profile.html", "My Profile"]]) {
+    for (const [path, label] of [["/dashboard.html", "Dashboard"], ["/add-reading.html", "Add Reading"], ["/health-records.html", "Health Records"], ["/health-trends.html", "Health Trends"], ["/health-alerts.html", "Health Alerts"], ["/consultation.html", "Doctor Consultation"], ["/profile.html", "My Profile"]]) {
         await check(label + " is selected on its page", async () => {
             const context = await setup(path);
             assert(current(context) === label, "Wrong page selected");
@@ -74,46 +74,29 @@
             assert(context.frame.contentDocument.documentElement.scrollWidth <= 390, "Mobile page has horizontal overflow");
         });
     }
-    for (const [hash, label] of [["#recent-readings", "Health Records"], ["#health-trends", "Health Trends"], ["#health-alerts", "Health Alerts"]]) {
-        await check(label + " is selected for a direct section link", async () => {
-            const context = await setup("/dashboard.html" + hash);
-            assert(current(context) === label, "Direct link selected Dashboard instead of section");
-            assert(context.query(".sidebar-nav a.active").getAttribute("aria-current") === "location", "Section selection not announced");
-        });
-        await check("Clicking " + label + " changes the active marker", async () => {
-            const context = await setup();
-            context.query(`.sidebar-nav a[href="${hash}"]`).click();
-            assert(current(context) === label, "Clicked link not immediately active");
-            await pause(1500);
-            assert(current(context) === label, "Selection changed after navigation: " + current(context) + ", scroll=" + context.frame.contentWindow.scrollY);
+    for (const [filename, label] of [["dashboard.html", "Dashboard"], ["add-reading.html", "Add Reading"], ["health-records.html", "Health Records"], ["health-trends.html", "Health Trends"], ["health-alerts.html", "Health Alerts"], ["consultation.html", "Doctor Consultation"], ["profile.html", "My Profile"]]) {
+        await check("Clicking " + label + " opens its dedicated page", async () => {
+            const context = await setup("/add-reading.html");
+            context.query(`.sidebar-nav a[href="${filename}"]`).click();
+            await waitFor(() => context.frame.contentWindow.location.pathname === "/" + filename && current(context) === label);
+            assert(!context.frame.contentWindow.location.hash, "Navigation still uses an anchor");
         });
     }
-    await check("A section link from another page selects the destination section", async () => {
-        const context = await setup("/add-reading.html");
-        context.query('.sidebar-nav a[href="dashboard.html#recent-readings"]').click();
-        await waitFor(() => context.frame.contentWindow.location.pathname === "/dashboard.html" && context.query('.sidebar-nav a.active[aria-current="location"]'));
-        assert(current(context) === "Health Records", "Cross-page navigation selected wrong link");
-    });
-    await check("Browser Back restores the previous section marker", async () => {
+    await check("Browser Back restores the previous page marker", async () => {
         const context = await setup();
-        context.query('.sidebar-nav a[href="#health-trends"]').click();
-        await waitFor(() => context.frame.contentWindow.location.hash === "#health-trends");
-        context.query('.sidebar-nav a[href="#recent-readings"]').click();
-        await waitFor(() => context.frame.contentWindow.location.hash === "#recent-readings");
+        context.query('.sidebar-nav a[href="health-trends.html"]').click();
+        await waitFor(() => current(context) === "Health Trends");
+        context.query('.sidebar-nav a[href="health-records.html"]').click();
+        await waitFor(() => current(context) === "Health Records");
         context.frame.contentWindow.history.back();
-        await waitFor(() => context.frame.contentWindow.location.hash === "#health-trends" && current(context) === "Health Trends");
+        await waitFor(() => current(context) === "Health Trends");
     });
-    await check("Manual section scrolling updates the active marker", async () => {
+    await check("Scrolling Dashboard keeps Dashboard selected", async () => {
         const context = await setup();
         context.query("#recent-readings").scrollIntoView({ block: "start", behavior: "instant" });
-        // Deliver the event explicitly because virtual time skips compositor ticks.
         context.frame.contentWindow.dispatchEvent(new context.frame.contentWindow.Event("scroll"));
         await pause(100);
-        assert(current(context) === "Health Records", "Scroll to records selected " + current(context) + ", y=" + context.frame.contentWindow.scrollY + ", sectionTop=" + context.query("#recent-readings").getBoundingClientRect().top);
-        context.frame.contentWindow.scrollTo({ top: 0, behavior: "instant" });
-        context.frame.contentWindow.dispatchEvent(new context.frame.contentWindow.Event("scroll"));
-        await pause(100);
-        assert(current(context) === "Dashboard", "Scroll to top selected " + current(context) + ", y=" + context.frame.contentWindow.scrollY);
+        assert(current(context) === "Dashboard", "Overview scrolling changed the page marker");
     });
     await check("The active mobile link is visible when the menu opens", async () => {
         const context = await setup("/consultation.html", 390);
@@ -125,13 +108,13 @@
         assert(active.top >= 0 && active.bottom <= 768, "Active link is outside viewport");
         assert(context.frame.contentWindow.scrollY === 0, "Opening menu scrolled the page");
     });
-    await check("A mobile section link closes the menu and keeps its active marker", async () => {
+    await check("A mobile feature link navigates and leaves the destination menu closed", async () => {
         const context = await setup("/dashboard.html", 390);
         context.query(".sidebar-toggle").click();
-        context.query('.sidebar-nav a[href="#health-alerts"]').click();
+        context.query('.sidebar-nav a[href="health-alerts.html"]').click();
         assert(context.query(".sidebar-content").hidden, "Navigation did not collapse menu");
-        await pause(1500);
-        assert(context.frame.contentWindow.location.hash === "#health-alerts", "Section navigation failed");
+        await waitFor(() => context.frame.contentWindow.location.pathname === "/health-alerts.html" && current(context) === "Health Alerts");
+        assert(context.query(".sidebar-content").hidden, "Destination menu should start closed");
         assert(current(context) === "Health Alerts", "Wrong mobile section selected");
     });
     await check("Clicking outside the mobile menu closes it", async () => {
@@ -148,10 +131,14 @@
         toggle.click();
         context.query(".sidebar-nav a.active").focus();
         context.frame.style.width = "1200px";
-        await waitFor(() => context.frame.contentWindow.getComputedStyle(toggle).display === "none" && !content.hidden);
+        await waitFor(() => context.frame.contentWindow.getComputedStyle(toggle).display === "none" && !content.hidden).catch(() => {
+            throw new Error("Desktop resize: width=" + context.frame.contentWindow.innerWidth + ", hidden=" + content.hidden + ", toggle=" + context.frame.contentWindow.getComputedStyle(toggle).display);
+        });
         assert(context.frame.contentWindow.innerWidth === 1200, "Desktop frame has not resized");
         context.frame.style.width = "390px";
-        await waitFor(() => context.frame.contentWindow.getComputedStyle(toggle).display !== "none" && content.hidden);
+        await waitFor(() => context.frame.contentWindow.getComputedStyle(toggle).display !== "none" && content.hidden).catch(() => {
+            throw new Error("Mobile resize: width=" + context.frame.contentWindow.innerWidth + ", hidden=" + content.hidden + ", toggle=" + context.frame.contentWindow.getComputedStyle(toggle).display);
+        });
         assert(context.frame.contentDocument.activeElement === toggle, "Resize left focus inside hidden menu");
         toggle.click();
         assert(!content.hidden, "Toggle failed after resize");
@@ -162,6 +149,7 @@
             const url = new URL(link.href);
             const response = await fetch(url.pathname);
             assert(response.ok, "Broken destination " + link.href);
+            assert(!url.hash, "Sidebar still links to a dashboard section");
             if (url.hash) {
                 const page = new DOMParser().parseFromString(await response.text(), "text/html");
                 assert(page.getElementById(url.hash.slice(1)), "Missing destination section " + url.hash);

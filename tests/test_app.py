@@ -73,11 +73,11 @@ class ApplicationTests(unittest.TestCase):
             with self.subTest(page=name):
                 self.assertEqual(self.page_bytes("/" + name), (PAGES_DIR / name).read_bytes())
         self.assertEqual(self.page_bytes("/"), (PAGES_DIR / "index.html").read_bytes())
-        for name in ("dashboard.html", "add-reading.html", "consultation.html"):
+        for name in ("dashboard.html", "add-reading.html", "health-records.html", "health-trends.html", "health-alerts.html", "consultation.html", "profile.html"):
             with self.subTest(page=name, authenticated=False):
                 self.assertEqual(self.page_bytes("/" + name), login_content)
         self.login_session()
-        for name in ("dashboard.html", "add-reading.html", "consultation.html"):
+        for name in ("dashboard.html", "add-reading.html", "health-records.html", "health-trends.html", "health-alerts.html", "consultation.html", "profile.html"):
             with self.subTest(page=name, authenticated=True):
                 response = self.client.get("/" + name)
                 self.assertEqual(response.status_code, 200)
@@ -97,6 +97,23 @@ class ApplicationTests(unittest.TestCase):
                     response = self.client.get("/" + url.path.lstrip("/"))
                     self.assertEqual(response.status_code, 200)
                     response.close()
+
+    def test_root_entry_point_uses_the_same_protected_pages(self):
+        from app import app as root_app
+
+        root_app.config.update(TESTING=True, SECRET_KEY="test-only-secret")
+        client = root_app.test_client()
+        for filename in ("health-records.html", "health-trends.html", "health-alerts.html"):
+            response = client.get("/" + filename)
+            self.assertEqual(response.data, (PAGES_DIR / "login.html").read_bytes())
+            response.close()
+        with client.session_transaction() as session:
+            session["patient_id"] = 7
+        for filename in ("health-records.html", "health-trends.html", "health-alerts.html"):
+            response = client.get("/" + filename)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, (PAGES_DIR / filename).read_bytes())
+            response.close()
 
     def test_asset_bytes_and_legacy_urls(self):
         for directory, aliases in (("css", ("CSS", "css")), ("js", ("JS", "js"))):

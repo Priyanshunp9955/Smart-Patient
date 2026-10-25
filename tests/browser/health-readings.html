@@ -70,13 +70,15 @@
         win.confirm = message => { confirmations.push(message); return options.confirm === true; };
         if (options.noChannel) win.BroadcastChannel = undefined;
         const charts = [];
-        if (!options.noPlotly) {
+        if (options.realPlotly) {
+            win.eval(fixtures.scripts.plotly);
+        } else if (!options.noPlotly) {
             win.Plotly = {
                 purge(element) { element.replaceChildren(); },
                 react(element, data) { charts.push(data); }
             };
         }
-        for (const script of ["notifications.js", "health-readings.js", ...(page === "dashboard" ? ["alerts.js", "dashboard.js"] : ["add-reading.js"])]) {
+        for (const script of ["notifications.js", "health-readings.js", ...(page === "add-reading" ? ["add-reading.js"] : [...(page === "health-alerts" ? ["alerts.js"] : []), "dashboard.js"])]) {
             win.eval(fixtures.scripts[script]);
         }
         return { frame, win, charts, confirmations, query: selector => frame.contentDocument.querySelector(selector) };
@@ -169,25 +171,26 @@
     });
     await check("Alerts use the newest saved API record including heart rate", async () => {
         const state = database([row(), row({ id: 2, heart_rate: 115, spo2: 94, measured_at: "2020-01-03T10:30" })]);
-        const context = await setup("dashboard", state);
-        await waitFor(() => context.query("#latestHeartRate").textContent === "115");
+        const context = await setup("health-alerts", state);
+        await waitFor(() => context.query(".health-alert-card"));
         assert(context.frame.contentDocument.querySelectorAll(".health-alert-card").length === 2, "Alerts did not use saved values");
         assert(context.query("#alertsContainer").textContent.includes("115 BPM"), "Heart rate API field not analyzed");
     });
     await check("Alerts use the latest save even when its measurement is backdated", async () => {
         const state = database([row({ id: 2, measured_at: "2020-01-03T10:30" })]);
         const dashboard = await setup("dashboard", state);
-        await waitFor(() => dashboard.query(".no-alert-message"));
+        const alerts = await setup("health-alerts", state);
+        await waitFor(() => alerts.query(".no-alert-message"));
         const form = await setup("add-reading", state);
         submitReading(form, { heartRate: "120", spo2: "94", temperature: "39", readingDate: "2020-01-01T10:00" });
         await waitFor(() => form.query(".notification-success"));
-        await waitFor(() => dashboard.frame.contentDocument.querySelectorAll(".health-alert-card").length === 3);
-        assert(dashboard.query("#alertsContainer").textContent.includes("120 BPM"), "Backdated save was ignored by alerts");
+        await waitFor(() => alerts.frame.contentDocument.querySelectorAll(".health-alert-card").length === 3);
+        assert(alerts.query("#alertsContainer").textContent.includes("120 BPM"), "Backdated save was ignored by alerts");
         assert(dashboard.query("#latestHeartRate").textContent === "72", "Existing measurement-based overview changed");
         assert(dashboard.query("#readingsTableBody tr").textContent.includes("2020-01-03"), "Existing history ordering changed");
     });
     await check("All five demonstration thresholds match independently and exclude equality", async () => {
-        const context = await setup("dashboard", database([row()]));
+        const context = await setup("health-alerts", database([row()]));
         await waitFor(() => context.query(".no-alert-message"));
         const boundaries = row({ heart_rate: 100, spo2: 95, systolic: 140, diastolic: 90, temperature: 38 });
         context.win.displayHealthAlerts(boundaries);
@@ -205,7 +208,7 @@
     });
     await check("Numeric strings are evaluated while missing and invalid values stay unavailable", async () => {
         const state = database([row({ heart_rate: "120", spo2: "94", systolic: "150", diastolic: "95", temperature: "39" })]);
-        const context = await setup("dashboard", state);
+        const context = await setup("health-alerts", state);
         await waitFor(() => context.frame.contentDocument.querySelectorAll(".health-alert-card").length === 5);
         for (const value of [null, undefined, "", " ", "invalid", "NaN", "Infinity", false, [], {}]) {
             context.win.displayHealthAlerts(row({ heart_rate: value, spo2: value, systolic: value, diastolic: value, temperature: value }));
@@ -216,7 +219,7 @@
         assert(context.query(".health-alert-card") && context.query("#alertsContainer").textContent.includes("Missing or invalid"), "Available alerts or missing-data information lost");
     });
     await check("A partial latest save does not fall back to old measurements", async () => {
-        const context = await setup("dashboard", database([
+        const context = await setup("health-alerts", database([
             row({ id: 1, heart_rate: 120 }),
             row({ id: 2, heart_rate: null, spo2: null, temperature: null, measured_at: null })
         ]));
@@ -226,7 +229,7 @@
     });
     await check("API failure clears stale alerts and never shows add-reading or no-match information", async () => {
         const state = database([row({ heart_rate: 120 })]);
-        const context = await setup("dashboard", state);
+        const context = await setup("health-alerts", state);
         await waitFor(() => context.query(".health-alert-card"));
         state.fail = true;
         context.win.dispatchEvent(new context.win.Event("focus"));
@@ -245,7 +248,7 @@
             async () => ({ ok: true, status: 200, json: async () => ({ status: "success" }) })
         ];
         for (const fetch of failures) {
-            const context = await setup("dashboard", database(), { fetch });
+            const context = await setup("health-alerts", database(), { fetch });
             await waitFor(() => context.query("#alertSummary").textContent.includes("could not be loaded"));
             assert(!context.query(".health-alert-card"), "Invalid response displayed an alert");
             assert(context.query("#alertsContainer").textContent.trim(), "Error explanation missing");
@@ -255,14 +258,17 @@
     await check("An empty current account clears old values and browser demo records", async () => {
         const state = database([row()]);
         const context = await setup("dashboard", state);
+        const alerts = await setup("health-alerts", state);
         await waitFor(() => context.query("#latestHeartRate").textContent === "72");
         state.rows = [];
         context.win.dispatchEvent(new context.win.Event("focus"));
+        alerts.win.dispatchEvent(new alerts.win.Event("focus"));
         await waitFor(() => context.query("#latestHeartRate").textContent === "--");
         assert(!context.query("#readingsTableBody tr"), "Old patient rows remain visible");
         assert(!context.query("#dashboardEmptyMessage").hidden, "Empty state hidden");
-        assert(!context.query(".health-alert-card"), "Old patient alerts remain visible");
-        assert(context.query("#alertSummary").textContent === "No health readings available.", "Empty state not distinguished from no matches");
+        await waitFor(() => alerts.query("#alertSummary").textContent === "No health readings available.");
+        assert(!alerts.query(".health-alert-card"), "Old patient alerts remain visible");
+        assert(alerts.query("#alertSummary").textContent === "No health readings available.", "Empty state not distinguished from no matches");
     });
     await check("Account changes display only the current API patient's data", async () => {
         const state = database([row({ heart_rate: 75 })]);
@@ -317,7 +323,7 @@
         assert(dashboard.query("#latestHeartRate").textContent === "72" && state.rows.length === 1, "Failed save changed recorded data");
     });
     await check("Both record tables show Actions and one Delete button per saved row", async () => {
-        for (const page of ["dashboard", "add-reading"]) {
+        for (const page of ["dashboard", "health-records", "add-reading"]) {
             const context = await setup(page, database([row(), row({ id: 2 })]));
             await waitFor(() => context.frame.contentDocument.querySelectorAll("[data-delete-reading]").length === 2);
             assert(context.query(".health-table th:last-child").textContent === "Actions", "Actions heading missing");
@@ -325,7 +331,7 @@
         }
     });
     await check("Cancelling confirmation sends no DELETE and leaves every reading intact", async () => {
-        for (const page of ["dashboard", "add-reading"]) {
+        for (const page of ["dashboard", "health-records", "add-reading"]) {
             const state = database([row()]);
             const context = await setup(page, state);
             await waitFor(() => context.query("[data-delete-reading]"));
@@ -342,34 +348,42 @@
         const state = database([row(), row({ id: 2, heart_rate: 120, spo2: 94, systolic: 150, diastolic: 95, temperature: 39, measured_at: "2020-01-03T10:30" })]);
         const dashboard = await setup("dashboard", state, { confirm: true });
         const form = await setup("add-reading", state, { confirm: true });
+        const records = await setup("health-records", state, { confirm: true });
+        const trends = await setup("health-trends", state);
+        const alerts = await setup("health-alerts", state);
         await waitFor(() => dashboard.query('[data-delete-reading="2"]') && form.query('[data-delete-reading="2"]'));
-        dashboard.query('[data-delete-reading="2"]').click();
+        await waitFor(() => records.query('[data-delete-reading="2"]'));
+        records.query('[data-delete-reading="2"]').click();
         await waitFor(() => dashboard.query("#latestHeartRate").textContent === "72" && !form.query('[data-delete-reading="2"]'));
         assert(dashboard.query("#latestSpo2").textContent === "98", "Oxygen card did not refresh");
         assert(dashboard.query("#latestBloodPressure").textContent === "120/80", "Pressure card did not refresh");
         assert(dashboard.query("#latestTemperature").textContent === "36.5", "Temperature card did not refresh");
         assert(JSON.stringify(dashboard.charts.at(-1)[0].y) === "[72]", "Deleted point stayed in trends");
-        assert(!dashboard.query(".health-alert-card") && dashboard.query("#alertSummary").textContent.includes("No demo rules matched"), "Alerts did not re-evaluate");
-        assert(dashboard.query(".notification-success"), "Success message missing");
+        await waitFor(() => alerts.query("#alertSummary").textContent === "No demo rules matched." && trends.charts.at(-1)?.[0].y.length === 1);
+        assert(!alerts.query(".health-alert-card"), "Alerts did not re-evaluate");
+        assert(records.query(".notification-success"), "Success message missing");
         const deletion = state.calls.find(call => call.method === "DELETE");
         assert(deletion.url === "/api/readings/2" && deletion.credentials === "same-origin", "DELETE did not target the signed-in record");
         form.query('[data-delete-reading="1"]').click();
         await waitFor(() => dashboard.query("#latestHeartRate").textContent === "--" && !form.query("#savedReadingsBody tr"));
         assert(!dashboard.query("#readingsTableBody tr") && !dashboard.query("#dashboardEmptyMessage").hidden, "Final deletion did not clear history");
         assert(dashboard.query("#healthTrendChart").textContent.includes("No health readings available"), "Final deletion did not clear trends");
-        assert(dashboard.query("#alertSummary").textContent === "No health readings available.", "Final deletion did not clear alerts");
+        await waitFor(() => alerts.query("#alertSummary").textContent === "No health readings available." && !records.query("#readingsTableBody tr"));
+        assert(trends.query("#healthTrendChart").textContent.includes("No health readings available"), "Dedicated trends did not clear");
         assert(!form.query("#emptyReadingsMessage").hidden && form.query(".notification-success"), "Form deletion feedback missing");
     });
     await check("Deleting a backdated latest save recalculates alerts from the remaining latest save", async () => {
         const state = database([row({ id: 1, heart_rate: 110 }), row({ id: 2, heart_rate: 130, measured_at: "2020-01-01T10:00" })]);
-        const context = await setup("dashboard", state, { confirm: true });
+        const context = await setup("health-alerts", state);
+        const records = await setup("health-records", state, { confirm: true });
         await waitFor(() => context.query("#alertsContainer").textContent.includes("130 BPM"));
-        context.query('[data-delete-reading="2"]').click();
+        await waitFor(() => records.query('[data-delete-reading="2"]'));
+        records.query('[data-delete-reading="2"]').click();
         await waitFor(() => context.query("#alertsContainer").textContent.includes("110 BPM"));
         assert(!context.query("#alertsContainer").textContent.includes("130 BPM"), "Deleted backdated record remained in alerts");
     });
     await check("Failed and missing-record deletions show errors and preserve visible data", async () => {
-        for (const page of ["dashboard", "add-reading"]) {
+        for (const page of ["dashboard", "health-records", "add-reading"]) {
             const state = database([row({ heart_rate: 120 })]);
             state.failDelete = true;
             const context = await setup(page, state, { confirm: true });
@@ -426,7 +440,7 @@
         assert(!context.query("#readingsTableBody tr"), "Local refresh depended on cross-tab messaging");
     });
     await check("Actions remain accessible inside the existing scrolling table on mobile", async () => {
-        const context = await setup("dashboard", database([row()]));
+        const context = await setup("health-records", database([row()]));
         context.frame.style.width = "375px";
         await waitFor(() => context.query("[data-delete-reading]"));
         const scroller = context.query(".table-scroll");
@@ -434,6 +448,66 @@
         scroller.scrollLeft = scroller.scrollWidth;
         assert(context.query("[data-delete-reading]").getBoundingClientRect().right <= scroller.getBoundingClientRect().right + 1, "Delete action cannot be reached on mobile");
     });
+    await check("Health Records shows full history while Dashboard stays compact", async () => {
+        const rows = Array.from({ length: 15 }, (_, index) => row({ id: index + 1 }));
+        const state = database(rows);
+        const records = await setup("health-records", state);
+        const dashboard = await setup("dashboard", state);
+        await waitFor(() => records.frame.contentDocument.querySelectorAll("#readingsTableBody tr").length === 15);
+        await waitFor(() => dashboard.frame.contentDocument.querySelectorAll("#readingsTableBody tr").length === 5);
+        assert(!records.query("#healthTrendChart") && !records.query("#alertsContainer"), "Records depends on unrelated feature DOM");
+        assert(!dashboard.query("#alertsContainer"), "Full alert analysis remains on Dashboard");
+    });
+    await check("Dedicated trends changes metric and includes full history on request", async () => {
+        const state = database([row(), row({ id: 2, heart_rate: 88, spo2: 96, measured_at: "2020-01-20T10:30" })]);
+        const trends = await setup("health-trends", state);
+        await waitFor(() => trends.charts.length);
+        assert(JSON.stringify(trends.charts.at(-1)[0].y) === "[88]", "Default window changed");
+        trends.query("#healthRange").value = "all";
+        trends.query("#healthRange").dispatchEvent(new trends.win.Event("change"));
+        assert(JSON.stringify(trends.charts.at(-1)[0].y) === "[72,88]", "Full history omitted saved readings");
+        trends.query("#healthMetric").value = "spo2";
+        trends.query("#healthMetric").dispatchEvent(new trends.win.Event("change"));
+        assert(JSON.stringify(trends.charts.at(-1)[0].y) === "[98,96]", "Metric selector did not update full history");
+        assert(!trends.query("#readingsTableBody") && !trends.query("#latestHeartRate"), "Trends depends on Dashboard DOM");
+    });
+    for (const page of ["health-records", "health-trends", "health-alerts"]) {
+        await check(page + " handles empty, failed, and refreshed patient data", async () => {
+            const state = database();
+            const context = await setup(page, state);
+            await waitFor(() => state.calls.length && context.query("#dashboardReadingsStatus").textContent === "");
+            state.fail = true;
+            context.win.dispatchEvent(new context.win.Event("focus"));
+            await waitFor(() => context.query("#dashboardReadingsStatus").textContent.includes("Unable"));
+            assert(context.query(".notification-error"), "Failure was not reported");
+            state.fail = false;
+            state.rows = [row({ heart_rate: 120 })];
+            context.win.dispatchEvent(new context.win.Event("focus"));
+            await waitFor(() => context.query("#dashboardReadingsStatus").textContent === "");
+            if (page === "health-records") assert(context.query("#readingsTableBody").textContent.includes("120 BPM"), "Records did not recover");
+            if (page === "health-trends") assert(context.charts.at(-1)[0].y[0] === 120, "Trends did not recover");
+            if (page === "health-alerts") assert(context.query(".health-alert-card"), "Alerts did not recover");
+        });
+    }
+    if (fixtures.scripts.plotly) {
+        await check("Real Plotly renders saved readings, metric changes, full history, and zoom", async () => {
+            const state = database([row(), row({ id: 2, heart_rate: 88, spo2: 96, measured_at: "2020-01-20T10:30" })]);
+            const context = await setup("health-trends", state, { realPlotly: true });
+            const chart = context.query("#healthTrendChart");
+            await waitFor(() => chart.querySelector(".main-svg") && chart.data?.[0].y[0] === 88);
+            context.query("#healthRange").value = "all";
+            context.query("#healthRange").dispatchEvent(new context.win.Event("change"));
+            await waitFor(() => chart.data[0].y.length === 2);
+            context.query("#healthMetric").value = "spo2";
+            context.query("#healthMetric").dispatchEvent(new context.win.Event("change"));
+            await waitFor(() => JSON.stringify(chart.data[0].y) === "[98,96]");
+            await context.win.Plotly.relayout(chart, { "xaxis.range": ["2020-01-01", "2020-01-10"], "xaxis.autorange": false });
+            assert(chart._fullLayout.xaxis.autorange === false, "Interactive zoom did not update the chart");
+            context.frame.style.width = "390px";
+            await context.win.Plotly.Plots.resize(chart);
+            assert(chart.getBoundingClientRect().width <= 390, "Real chart overflows mobile viewport");
+        });
+    }
     await check("No unexpected JavaScript errors", async () => {
         assert(runtimeErrors.length === 0, runtimeErrors.join("; "));
     });

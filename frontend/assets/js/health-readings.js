@@ -1,6 +1,6 @@
 "use strict";
 
-// Both reading pages use the signed-in patient's API data without a local cache.
+// All patient reading views use the signed-in API without a local cache.
 (() => {
     const pendingDeletes = new Set();
     let channel;

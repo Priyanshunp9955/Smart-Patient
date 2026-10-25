@@ -67,6 +67,7 @@ tables. Run the additive profile migration below before using My Profile.
 Edit markup in `frontend/pages`, styling in `frontend/assets/css`, and browser
 behavior in `frontend/assets/js`. The page URLs remain `/index.html`,
 `/login.html`, `/register.html`, `/dashboard.html`, `/add-reading.html`,
+`/health-records.html`, `/health-trends.html`, `/health-alerts.html`,
 `/consultation.html`, and `/profile.html`. Assets are served under `/assets/`; the previous
 `/CSS/`, `/css/`, `/JS/`, `/js/`, `/Image/`, and `/image/` URLs also work.
 
@@ -82,8 +83,8 @@ Popup feedback is shared through `frontend/assets/js/notifications.js` and
 `success`, `error`, `warning`, and `info`. Errors remain until dismissed;
 other cards close automatically and pause while hovered or focused.
 
-Health records on the dashboard and Add Reading page share
-`frontend/assets/js/health-readings.js`. Both fetch the current patient's
+Dashboard, Add Reading, Health Records, Health Trends, and Health Alerts share
+`frontend/assets/js/health-readings.js`. All fetch the current patient's
 `/api/readings` data without caching. Records refresh after saving, when a
 page regains focus, when browser Back restores a page, and when another open
 page saves a reading. Cross-tab messages carry only a refresh signal; health
@@ -98,7 +99,7 @@ Complete readings with no matches show information; unavailable measurements
 show an incomplete-analysis message, and failed API requests clear stale alerts
 and show an error. Alerts are for academic demonstration only.
 
-Both saved-reading tables have an Actions column. Delete opens a browser
+Saved-reading tables have an Actions column. Delete opens a browser
 confirmation identifying the reading ID and measurement date; cancelling sends
 no request. Confirmed deletion calls `DELETE /api/readings/<reading_id>` with
 JSON `{ "confirmed": true }` and `X-SmartHealth-Action: delete-reading`.
@@ -107,6 +108,65 @@ deletes only when both the record ID and session patient ID match. Missing or
 other-patient IDs return the same 404 response. Successful deletion refreshes
 the current page and other open reading pages through the existing refresh
 signals, including cards, history, trends, and demonstration alerts.
+
+## Dedicated patient pages — TDP Project-2026
+
+Start Flask from the project root with either command (both use the canonical
+`backend.smart_patient` application):
+
+```powershell
+.\backend\venv\Scripts\python.exe .\backend\app.py
+# Or:
+.\backend\venv\Scripts\python.exe .\app.py
+```
+
+Open <http://127.0.0.1:5000/>, sign in with an existing patient account, and use
+the sidebar. Each feature now opens its own HTML page. All seven pages require
+a patient session; opening one without a session shows the existing login page.
+The shared sidebar sets exactly one `aria-current="page"` marker. Its native
+Menu button works with Enter/Space, Escape closes the mobile menu and returns
+focus, and changing pages starts with the mobile menu collapsed.
+
+| Page at `http://127.0.0.1:5000/` | Local verification |
+| --- | --- |
+| `dashboard.html` | Check the four latest measurement cards, compact seven-day chart, and at most five recent readings. Use View full health trends and View all health records to open the dedicated pages. |
+| `add-reading.html` | Save a genuine measurement, then verify it appears in Records and the other open views. Existing validation and saved-reading deletion remain available. |
+| `health-records.html` | Check all of your saved readings, ordered by measurement date and ID. Cancel Delete to verify no request is sent. Only confirm deletion for a record you intend to remove; the action is permanent. |
+| `health-trends.html` | Select each metric, switch between Latest seven days and All readings, and use Plotly hover/zoom/reset controls. Values must match your saved readings. The existing Plotly CDN needs internet access; failure produces an explicit chart message. |
+| `health-alerts.html` | Check the five existing academic rules against your highest-ID saved reading, including backdated saves. Empty, incomplete, and failed loads have distinct messages. Doctor consultation remains an optional patient choice. |
+| `consultation.html` | Select a doctor and test the existing optional demonstration appointment flow. |
+| `profile.html` | Verify saved details, Edit/Cancel, photo preview/upload/removal, and Change Password. These controls and their APIs are unchanged. |
+
+Also check each page at 390px, tablet, and desktop widths: open/close Menu,
+use keyboard focus and Escape, check the active item after navigation and
+browser Back, and horizontally scroll the Records table to reach Delete.
+Log out and confirm all seven pages and the reading/profile APIs require login.
+Use another existing account to confirm patient data remains isolated.
+
+The new pages reuse the existing panels and `dashboard.js` view controller;
+it renders only the components present on each page. Records shows full history,
+Dashboard limits its recent list to five, and Trends adds a full-history range.
+The existing MySQL schema, reading APIs, deletion protections, profile security,
+and academic thresholds are unchanged. No migration or seed data is needed.
+
+Automated checks (browser suites use isolated API fixtures, never production writes):
+
+```powershell
+.\backend\venv\Scripts\python.exe -m unittest discover -s tests -v
+.\backend\venv\Scripts\python.exe tests/run_notifications_browser.py --suite sidebar
+.\backend\venv\Scripts\python.exe tests/run_notifications_browser.py --suite health-readings
+.\backend\venv\Scripts\python.exe tests/run_notifications_browser.py --suite profile
+.\backend\venv\Scripts\python.exe tests/run_notifications_browser.py --suite notifications
+```
+
+To additionally exercise real Plotly SVG rendering, metric/range updates, zoom,
+and mobile chart sizing, download the same pinned bundle to a temporary file:
+
+```powershell
+$plotlyTestBundle = Join-Path $env:TEMP 'smarthealth-plotly-3.1.0.min.js'
+Invoke-WebRequest 'https://cdn.plot.ly/plotly-3.1.0.min.js' -OutFile $plotlyTestBundle
+.\backend\venv\Scripts\python.exe tests/run_notifications_browser.py --suite health-readings --plotly-script $plotlyTestBundle
+```
 
 ## Patient profile
 

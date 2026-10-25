@@ -1,9 +1,9 @@
-"""Flask entry point; run with python backend/app.py from the project root."""
+"""Root development entry point using the canonical backend package."""
 
 if __package__:
-    from .smart_patient import create_app
+    from .backend.smart_patient import create_app
 else:
-    from smart_patient import create_app
+    from backend.smart_patient import create_app
 
 app = create_app()
 

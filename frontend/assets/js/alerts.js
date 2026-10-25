@@ -91,7 +91,7 @@ function createAlertCard(alert) {
     return card;
 }
 
-// Display the alert analysis on the dashboard.
+// Display the alert analysis on the dedicated Health Alerts page.
 
 function displayHealthAlerts(reading, errorMessage = "") {
     const container = document.getElementById("alertsContainer");
@@ -115,7 +115,7 @@ function displayHealthAlerts(reading, errorMessage = "") {
 
         const message = document.createElement("p");
         message.textContent =
-            "Add a demo reading to test the alert system.";
+            "Add a health reading to view the demonstration analysis.";
 
         container.appendChild(message);
         return;

@@ -1,6 +1,6 @@
 
-// Patient Dashboard
-// Uses the same patient-scoped API as Add Health Reading.
+// Shared view controller for Dashboard, Health Records, Health Trends and Alerts.
+// Each page renders only the components it contains from one patient API snapshot.
 
 const metricSettings = {
     heart_rate: {
@@ -28,6 +28,7 @@ const metricSettings = {
 // Update the four health overview cards.
 
 function updateHealthCards(readings) {
+    if (!document.getElementById("latestHeartRate")) return;
     if (readings.length === 0) {
         for (const id of ["latestHeartRate", "latestSpo2", "latestBloodPressure", "latestTemperature"]) {
             document.getElementById(id).textContent = "--";
@@ -64,6 +65,7 @@ function renderHealthHistory(readings) {
     const tableBody = document.getElementById("readingsTableBody");
     const emptyMessage = document.getElementById("dashboardEmptyMessage");
 
+    if (!tableBody) return;
     tableBody.replaceChildren();
 
     if (emptyMessage) {
@@ -71,19 +73,20 @@ function renderHealthHistory(readings) {
         emptyMessage.textContent = "No health readings saved yet.";
     }
 
-    const recentReadings = readings.slice(0, 10);
+    const limit = tableBody.dataset.limit === "all" ? readings.length : Number(tableBody.dataset.limit || 10);
+    const recentReadings = readings.slice(0, limit);
 
     recentReadings.forEach(reading => {
         const row = document.createElement("tr");
 
         addTableCell(row, reading.measured_at?.replace("T", " ") || "--");
-        addTableCell(row, `${reading.heart_rate} BPM`);
-        addTableCell(row, `${reading.spo2}%`);
+        addTableCell(row, `${reading.heart_rate ?? "--"} BPM`);
+        addTableCell(row, `${reading.spo2 ?? "--"}%`);
         addTableCell(
             row,
-            `${reading.systolic}/${reading.diastolic} mmHg`
+            `${reading.systolic ?? "--"}/${reading.diastolic ?? "--"} mmHg`
         );
-        addTableCell(row, `${reading.temperature} °C`);
+        addTableCell(row, `${reading.temperature ?? "--"} °C`);
 
         const actions = document.createElement("td");
         actions.appendChild(window.SmartHealth.readings.createDeleteButton(reading));
@@ -135,9 +138,10 @@ function renderHealthChart(metric, readings) {
     startDate.setDate(startDate.getDate() - 6);
     startDate.setHours(0, 0, 0, 0);
 
+    const allReadings = document.getElementById("healthRange")?.value === "all";
     const lastSevenDays = readings.slice().reverse().filter(reading => {
         const date = new Date(reading.measured_at);
-        return date >= startDate && date <= latestDate;
+        return Number.isFinite(date.getTime()) && (allReadings || (date >= startDate && date <= latestDate));
     });
 
     const chartData = [{
@@ -158,6 +162,7 @@ function renderHealthChart(metric, readings) {
     }];
 
     const chartLayout = {
+        height: Number(chartElement.dataset.height || 360),
         margin: { t: 20, r: 20, b: 55, l: 60 },
         paper_bgcolor: "#ffffff",
         plot_bgcolor: "#ffffff",
@@ -180,7 +185,7 @@ function renderHealthChart(metric, readings) {
         autosize: true
     };
 
-    Plotly.react(chartElement, chartData, chartLayout, {
+    const rendered = Plotly.react(chartElement, chartData, chartLayout, {
         responsive: true,
         displaylogo: false
     });
@@ -188,14 +193,19 @@ function renderHealthChart(metric, readings) {
     if (chartNote) {
         chartNote.textContent =
             `Showing ${lastSevenDays.length} saved reading(s) ` +
-            "from the latest seven-day measurement window.";
+            (allReadings ? "across your full measurement history." : "from the latest seven-day measurement window.");
     }
+    // A chart failure must not stop the other patient views from updating.
+    rendered?.catch(() => {
+        if (chartNote) chartNote.textContent = "Health trends could not be rendered. Please refresh the page.";
+    });
 }
 
 // Refresh every dashboard section from the same snapshot of patient records.
 
 function initializeDashboard() {
     const metricSelect = document.getElementById("healthMetric");
+    const rangeSelect = document.getElementById("healthRange");
     const status = document.getElementById("dashboardReadingsStatus");
     let readings = [];
     let requestId = 0;
@@ -210,7 +220,7 @@ function initializeDashboard() {
             !latest || Number(reading.id) > Number(latest.id) ? reading : latest,
             null
         );
-        displayHealthAlerts(latestSaved, errorMessage);
+        if (typeof displayHealthAlerts === "function") displayHealthAlerts(latestSaved, errorMessage);
         if (metricSelect) renderHealthChart(metricSelect.value, readings);
     }
 
@@ -230,14 +240,19 @@ function initializeDashboard() {
             render(message);
             if (error.status === 401) return;
             status.textContent = message;
-            document.getElementById("dashboardEmptyMessage").textContent = "Health records could not be loaded.";
-            document.getElementById("chartNote").textContent = "Health trends could not be loaded.";
+            const emptyMessage = document.getElementById("dashboardEmptyMessage");
+            const chartNote = document.getElementById("chartNote");
+            if (emptyMessage) emptyMessage.textContent = "Health records could not be loaded.";
+            if (chartNote) chartNote.textContent = "Health trends could not be loaded.";
             window.SmartHealth.notify(message, "error");
         }
     }
 
     if (metricSelect) {
         metricSelect.addEventListener("change", () => renderHealthChart(metricSelect.value, readings));
+    }
+    if (rangeSelect && metricSelect) {
+        rangeSelect.addEventListener("change", () => renderHealthChart(metricSelect.value, readings));
     }
     window.SmartHealth.readings.onChange(refresh);
     refresh();

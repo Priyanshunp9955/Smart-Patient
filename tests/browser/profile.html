@@ -344,7 +344,7 @@
         await waitFor(() => !context.query("#profilePhotoAvatar img") && !context.query(".patient-account-link img"));
         assert(context.query(".patient-account-link [data-patient-initials]").textContent === "TP", "Initials fallback missing");
     });
-    for (const page of ["dashboard", "add-reading", "consultation", "profile"]) {
+    for (const page of ["dashboard", "add-reading", "health-records", "health-trends", "health-alerts", "consultation", "profile"]) {
         await check(`The ${page} account links avatar and name to Profile with a separate Logout`, async () => {
             const context = await setup(state(), page, 390);
             const link = context.query(".patient-account-link");

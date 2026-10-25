@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Health Records | SmartHealth</title>
+
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <link rel="stylesheet" href="/assets/css/page-layout.css">
+    <link rel="stylesheet" href="/assets/css/notifications.css">
+</head>
+
+<body class="dashboard-page">
+
+    <div class="dashboard-layout">
+
+        <!-- Sidebar Navigation -->
+        <aside class="dashboard-sidebar">
+
+            <a href="index.html" class="logo dashboard-logo">
+                <span class="logo-symbol">+</span>
+                Smart<span>Health</span>
+            </a>
+
+            <p class="sidebar-heading">PATIENT PORTAL</p>
+
+            <nav class="sidebar-nav" aria-label="Patient navigation">
+                <a href="dashboard.html">
+                    Dashboard
+                </a>
+                <a href="add-reading.html">
+                    Add Reading
+                </a>
+
+                <a href="health-records.html" class="active" aria-current="page">
+                    Health Records
+                </a>
+
+                <a href="health-trends.html">
+                    Health Trends
+                </a>
+
+                <a href="health-alerts.html">
+                    Health Alerts
+                </a>
+
+                <a href="consultation.html">
+                    Doctor Consultation
+                </a>
+                <a href="profile.html">My Profile</a>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <p>SmartHealth Patient Portal</p>
+                <a href="index.html">Back to Home</a>
+            </div>
+
+        </aside>
+
+
+        <main class="dashboard-main">
+            <header class="dashboard-topbar">
+                <div>
+                    <p class="dashboard-eyebrow">PATIENT HEALTH HISTORY</p>
+                    <h1>Health Records</h1>
+                </div>
+
+                <nav class="account-navigation" aria-label="Account navigation">
+                    <div class="dashboard-profile">
+                        <a href="profile.html" class="patient-account-link" aria-label="Open My Profile">
+                        <div class="profile-avatar" data-patient-initials aria-hidden="true">?</div>
+                        <div class="profile-details">
+                            <strong data-patient-name>Loading account...</strong>
+                            <small>Patient Account</small>
+                        </div>
+                        </a>
+                        <button type="button" class="logout-button" data-logout>Log out</button>
+                    </div>
+                    <p class="account-status" data-account-status role="status" aria-live="polite"></p>
+                </nav>
+            </header>
+            <p id="dashboardReadingsStatus" class="dashboard-note" role="status"></p>
+
+<section class="dashboard-section" id="recent-readings">
+
+                <div class="dashboard-section-heading">
+                    <div>
+                        <h2>Saved Health Readings</h2>
+                        <p>All readings saved to your account, ordered by measurement date</p>
+                    </div>
+                </div>
+
+                <div class="dashboard-panel table-panel">
+                    <div class="table-scroll">
+                        <table class="health-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Heart Rate</th>
+                                    <th>SpO₂</th>
+                                    <th>Blood Pressure</th>
+                                    <th>Temperature</th>
+                                    <th scope="col">Actions</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="readingsTableBody" data-limit="all"></tbody>
+                        </table>
+                        <p id="dashboardEmptyMessage" class="empty-readings" hidden>
+                             No readings available. Add your first health reading.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="dashboard-footer">
+                SmartHealth | TDP Project-2026
+            </footer>
+        </main>
+    </div>
+
+    <script src="/assets/js/notifications.js"></script>
+    <script src="/assets/js/health-readings.js"></script>
+    <script src="/assets/js/dashboard.js"></script>
+    <script src="/assets/js/session.js"></script>
+    <script src="/assets/js/sidebar.js"></script>
+</body>
+</html>

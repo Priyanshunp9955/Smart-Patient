@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Health Alerts | SmartHealth</title>
+
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <link rel="stylesheet" href="/assets/css/page-layout.css">
+    <link rel="stylesheet" href="/assets/css/notifications.css">
+</head>
+
+<body class="dashboard-page">
+
+    <div class="dashboard-layout">
+
+        <!-- Sidebar Navigation -->
+        <aside class="dashboard-sidebar">
+
+            <a href="index.html" class="logo dashboard-logo">
+                <span class="logo-symbol">+</span>
+                Smart<span>Health</span>
+            </a>
+
+            <p class="sidebar-heading">PATIENT PORTAL</p>
+
+            <nav class="sidebar-nav" aria-label="Patient navigation">
+                <a href="dashboard.html">
+                    Dashboard
+                </a>
+                <a href="add-reading.html">
+                    Add Reading
+                </a>
+
+                <a href="health-records.html">
+                    Health Records
+                </a>
+
+                <a href="health-trends.html">
+                    Health Trends
+                </a>
+
+                <a href="health-alerts.html" class="active" aria-current="page">
+                    Health Alerts
+                </a>
+
+                <a href="consultation.html">
+                    Doctor Consultation
+                </a>
+                <a href="profile.html">My Profile</a>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <p>SmartHealth Patient Portal</p>
+                <a href="index.html">Back to Home</a>
+            </div>
+
+        </aside>
+
+
+        <main class="dashboard-main">
+            <header class="dashboard-topbar">
+                <div>
+                    <p class="dashboard-eyebrow">ACADEMIC ALERT ANALYSIS</p>
+                    <h1>Health Alerts</h1>
+                </div>
+
+                <nav class="account-navigation" aria-label="Account navigation">
+                    <div class="dashboard-profile">
+                        <a href="profile.html" class="patient-account-link" aria-label="Open My Profile">
+                        <div class="profile-avatar" data-patient-initials aria-hidden="true">?</div>
+                        <div class="profile-details">
+                            <strong data-patient-name>Loading account...</strong>
+                            <small>Patient Account</small>
+                        </div>
+                        </a>
+                        <button type="button" class="logout-button" data-logout>Log out</button>
+                    </div>
+                    <p class="account-status" data-account-status role="status" aria-live="polite"></p>
+                </nav>
+            </header>
+            <p id="dashboardReadingsStatus" class="dashboard-note" role="status"></p>
+
+<section class="dashboard-section" id="health-alerts">
+
+    <div class="dashboard-section-heading">
+        <div>
+            <h2>Health Alerts</h2>
+            <p>
+                Rule-based analysis of the latest saved reading
+            </p>
+        </div>
+
+    </div>
+
+    <div class="dashboard-panel">
+
+        <div class="alert-section-header">
+            <div>
+                <h3>Early Alert Analysis</h3>
+                <p id="alertSummary">
+                    Checking saved health readings...
+                </p>
+            </div>
+        </div>
+
+        <div id="alertsContainer"
+             class="alerts-container"
+             aria-live="polite">
+        </div>
+
+        <p class="alert-disclaimer">
+            Demonstration only. These alerts do not provide
+            a medical diagnosis or confirm that a reading
+            is safe. For medical concerns, seek advice from
+            a qualified healthcare professional.
+        </p>
+
+    </div>
+
+</section>
+
+<section class="dashboard-section" id="consultation">
+                <div class="consultation-panel">
+                    <div>
+                        <h2>Need to Consult a Doctor?</h2>
+                        <p>
+                            You can choose to seek professional
+                            medical advice whenever you feel
+                            a consultation is necessary.
+                        </p>
+                        <a href="consultation.html" class="primary-button">
+                                Explore Doctor Consultation
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="dashboard-footer">
+                SmartHealth | TDP Project-2026
+            </footer>
+        </main>
+    </div>
+
+    <script src="/assets/js/notifications.js"></script>
+    <script src="/assets/js/health-readings.js"></script>
+    <script src="/assets/js/alerts.js"></script>
+    <script src="/assets/js/dashboard.js"></script>
+    <script src="/assets/js/session.js"></script>
+    <script src="/assets/js/sidebar.js"></script>
+</body>
+</html>

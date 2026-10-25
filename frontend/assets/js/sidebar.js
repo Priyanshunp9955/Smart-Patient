@@ -1,6 +1,6 @@
 "use strict";
 
-// Keep page links and dashboard section links in sync with navigation.
+// Shared patient navigation, appearance, and accessible mobile disclosure.
 (() => {
     const navigation = document.querySelector(".sidebar-nav");
     if (!navigation) return;
@@ -24,9 +24,9 @@
     // Enhance the existing shared markup; the original links remain usable without JS.
     for (const link of navigation.querySelectorAll("a[href]")) {
         const url = new URL(link.href);
-        const name = url.hash === "#recent-readings" ? "records"
-            : url.hash === "#health-trends" ? "trends"
-            : url.hash === "#health-alerts" ? "alerts"
+        const name = url.pathname.endsWith("health-records.html") ? "records"
+            : url.pathname.endsWith("health-trends.html") ? "trends"
+            : url.pathname.endsWith("health-alerts.html") ? "alerts"
             : url.pathname.endsWith("add-reading.html") ? "reading"
             : url.pathname.endsWith("consultation.html") ? "consultation"
             : url.pathname.endsWith("profile.html") ? "patient" : "dashboard";
@@ -97,70 +97,15 @@
     window.addEventListener("pageshow", syncLayout);
     syncLayout();
 
-    const entries = [...navigation.querySelectorAll("a[href]")].map(link => ({
-        link, url: new URL(link.href)
-    }));
-    const currentPage = entries.filter(entry => entry.url.pathname === window.location.pathname);
-    const pageLink = currentPage.find(entry => !entry.url.hash);
-    const sections = currentPage.filter(entry => entry.url.hash).map(entry => ({
-        ...entry, section: document.getElementById(decodeURIComponent(entry.url.hash.slice(1)))
-    })).filter(entry => entry.section);
-    let navigationTimer;
-    let navigatingToSection = false;
-
-    function activate(entry) {
-        if (!entry) return;
-        for (const item of entries) {
-            const selected = item === entry || item.link === entry.link;
-            item.link.classList.toggle("active", selected);
-            if (selected) item.link.setAttribute("aria-current", item.url.hash ? "location" : "page");
-            else item.link.removeAttribute("aria-current");
-        }
-    }
-
-    function followScroll() {
-        if (navigatingToSection || !sections.length) return;
-        const marker = Math.min(window.innerHeight * 0.25, 180);
-        let selected = pageLink;
-        let nearestTop = -Infinity;
-        for (const entry of sections) {
-            const top = entry.section.getBoundingClientRect().top;
-            if (top <= marker && top > nearestTop) {
-                nearestTop = top;
-                selected = entry;
-            }
-        }
-        activate(selected);
-    }
-
-    function selectDestination(entry) {
-        clearTimeout(navigationTimer);
-        navigatingToSection = Boolean(entry?.url.hash);
-        activate(entry);
-        if (navigatingToSection) {
-            // Keep the clicked tab selected during smooth anchor scrolling.
-            navigationTimer = setTimeout(() => {
-                navigatingToSection = false;
-                followScroll();
-            }, 1200);
-        }
-    }
-
     function followLocation() {
-        const section = sections.find(entry => entry.url.hash === window.location.hash);
-        selectDestination(section || pageLink);
+        for (const link of navigation.querySelectorAll("a[href]")) {
+            const selected = new URL(link.href).pathname === window.location.pathname;
+            link.classList.toggle("active", selected);
+            if (selected) link.setAttribute("aria-current", "page");
+            else link.removeAttribute("aria-current");
+        }
     }
-
-    navigation.addEventListener("click", event => {
-        if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
-        const link = event.target.closest("a[href]");
-        const entry = entries.find(item => item.link === link);
-        if (entry) selectDestination(entry);
-    });
-    window.addEventListener("hashchange", followLocation);
     window.addEventListener("popstate", followLocation);
     window.addEventListener("pageshow", followLocation);
-    window.addEventListener("scroll", followScroll, { passive: true });
-    window.addEventListener("resize", followScroll);
     followLocation();
 })();

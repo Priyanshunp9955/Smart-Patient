@@ -1,5 +1,24 @@
 /* Keep each patient task in its own viewport-sized section. */
 
+/* Dedicated feature pages reuse the portal panels without stacked full screens. */
+.dashboard-overview .health-trend-chart {
+    min-height: 220px;
+}
+
+.feature-page-link {
+    color: var(--primary-dark);
+    font-weight: 600;
+}
+
+.feature-page-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.dashboard-section-heading:has(#healthRange) {
+    flex-wrap: wrap;
+}
+
 .dashboard-main {
     --page-block-padding: 32px;
 }

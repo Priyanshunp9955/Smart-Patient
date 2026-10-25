@@ -15,6 +15,7 @@ def frontend_files(filename):
     allowed_pages = {
         "index.html", "login.html", "register.html",
         "dashboard.html", "add-reading.html",
+        "health-records.html", "health-trends.html", "health-alerts.html",
         "consultation.html", "profile.html"
     }
 
@@ -22,6 +23,7 @@ def frontend_files(filename):
         if filename in {
             "dashboard.html",
             "add-reading.html",
+            "health-records.html", "health-trends.html", "health-alerts.html",
             "consultation.html", "profile.html"
         } and "patient_id" not in session:
             return send_from_directory(PAGES_DIR, "login.html")

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Patient Dashboard | SmartHealth</title>
+    <title>Health Dashboard | SmartHealth</title>
 
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="stylesheet" href="/assets/css/page-layout.css">
@@ -13,7 +13,7 @@
     <script src="https://cdn.plot.ly/plotly-3.1.0.min.js"></script>
 </head>
 
-<body class="dashboard-page">
+<body class="dashboard-page dashboard-overview">
 
     <div class="dashboard-layout">
 
@@ -28,22 +28,22 @@
             <p class="sidebar-heading">PATIENT PORTAL</p>
 
             <nav class="sidebar-nav" aria-label="Patient navigation">
-                <a href="dashboard.html" class="active">
+                <a href="dashboard.html" class="active" aria-current="page">
                     Dashboard
                 </a>
                 <a href="add-reading.html">
                     Add Reading
                 </a>
 
-                <a href="#recent-readings">
+                <a href="health-records.html">
                     Health Records
                 </a>
 
-                <a href="#health-trends">
+                <a href="health-trends.html">
                     Health Trends
                 </a>
 
-                <a href="#health-alerts">
+                <a href="health-alerts.html">
                     Health Alerts
                 </a>
 
@@ -60,12 +60,11 @@
 
         </aside>
 
-        <!-- Dashboard Content -->
-        <main class="dashboard-main">
-            <div class="page-stage page-stage-primary">
 
+        <main class="dashboard-main">
             <header class="dashboard-topbar">
                 <div>
+                    <br/>
                     <p class="dashboard-eyebrow">PATIENT OVERVIEW</p>
                     <h1>Health Dashboard</h1>
                 </div>
@@ -84,9 +83,8 @@
                     <p class="account-status" data-account-status role="status" aria-live="polite"></p>
                 </nav>
             </header>
-
             <p id="dashboardReadingsStatus" class="dashboard-note" role="status"></p>
-
+            <br/>
             <!-- Welcome -->
             <section class="welcome-panel">
                 <div>
@@ -174,16 +172,16 @@
 </div>
 
             </section>
-
-            <!-- Health Trends -->
-            </div>
-
-            <section class="dashboard-section page-stage" id="health-trends">
+<br/>
+<br/>
+<br/>
+<br/>
+<section class="dashboard-section" id="health-trends">
 
                 <div class="dashboard-section-heading">
                     <div>
-                        <h2>Seven-Day Health Trends</h2>
-                        <p>Illustrative changes in recorded measurements</p>
+                        <h2>Health Trend Preview</h2>
+                        <p><a class="feature-page-link" href="health-trends.html">View full health trends &rarr;</a></p>
                     </div>
 
                     <label class="chart-control">
@@ -200,7 +198,7 @@
 
                 <div class="dashboard-panel">
                     <div id="healthTrendChart"
-                         class="health-trend-chart"
+                         class="health-trend-chart" data-height="220"
                          aria-label="Seven-day health trend chart">
                     </div>
 
@@ -209,14 +207,14 @@
                     </p>
                 </div>
             </section>
-
-            <!-- Health Records -->
-            <section class="dashboard-section page-stage" id="recent-readings">
+            <br/>
+            <br/>
+<section class="dashboard-section" id="recent-readings">
 
                 <div class="dashboard-section-heading">
                     <div>
-                        <h2>Recent Health Readings</h2>
-                        <p>Your saved health history</p>
+                        <h2>Recent Activity</h2>
+                        <p><a class="feature-page-link" href="health-records.html">View all health records &rarr;</a></p>
                     </div>
                 </div>
 
@@ -234,7 +232,7 @@
                                 </tr>
                             </thead>
 
-                            <tbody id="readingsTableBody"></tbody>
+                            <tbody id="readingsTableBody" data-limit="5"></tbody>
                         </table>
                         <p id="dashboardEmptyMessage" class="empty-readings" hidden>
                              No readings available. Add your first health reading.
@@ -243,51 +241,7 @@
                 </div>
             </section>
 
-            
-<!-- Health Alerts -->
-<div class="page-stage">
-<section class="dashboard-section" id="health-alerts">
-
-    <div class="dashboard-section-heading">
-        <div>
-            <h2>Health Alerts</h2>
-            <p>
-                Rule-based analysis of the latest saved reading
-            </p>
-        </div>
-
-    </div>
-
-    <div class="dashboard-panel">
-
-        <div class="alert-section-header">
-            <div>
-                <h3>Early Alert Analysis</h3>
-                <p id="alertSummary">
-                    Checking saved health readings...
-                </p>
-            </div>
-        </div>
-
-        <div id="alertsContainer"
-             class="alerts-container"
-             aria-live="polite">
-        </div>
-
-        <p class="alert-disclaimer">
-            Demonstration only. These alerts do not provide
-            a medical diagnosis or confirm that a reading
-            is safe. For medical concerns, seek advice from
-            a qualified healthcare professional.
-        </p>
-
-    </div>
-
-</section>
-
-
-            <!-- Doctor Consultation -->
-            <section class="dashboard-section" id="consultation">
+<section class="dashboard-section" id="consultation">
                 <div class="consultation-panel">
                     <div>
                         <h2>Need to Consult a Doctor?</h2>
@@ -303,19 +257,15 @@
                 </div>
             </section>
 
-            </div>
-
             <footer class="dashboard-footer">
                 SmartHealth | TDP Project-2026
             </footer>
-
         </main>
     </div>
 
     <script src="/assets/js/notifications.js"></script>
     <script src="/assets/js/health-readings.js"></script>
-    <script src="/assets/js/alerts.js"></script>
-<script src="/assets/js/dashboard.js"></script>
+    <script src="/assets/js/dashboard.js"></script>
     <script src="/assets/js/session.js"></script>
     <script src="/assets/js/sidebar.js"></script>
 </body>

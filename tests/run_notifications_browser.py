@@ -19,6 +19,7 @@ CHROME = Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe")
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--suite", choices=("notifications", "health-readings", "sidebar", "profile"), default="notifications")
+    parser.add_argument("--plotly-script", type=Path, help="Optional local copy of the pinned Plotly bundle for real chart checks")
     args = parser.parse_args()
     if not CHROME.is_file():
         raise SystemExit("Google Chrome is required for these browser checks.")
@@ -29,6 +30,8 @@ def main():
         html = re.sub(r'<script src="https://[^>]*></script>', "", path.read_text(encoding="utf-8"))
         pages[path.stem] = html
     scripts = {path.name: path.read_text(encoding="utf-8") for path in (ROOT / "frontend/assets/js").glob("*.js")}
+    if args.plotly_script:
+        scripts["plotly"] = args.plotly_script.read_text(encoding="utf-8")
     image_buffer = BytesIO()
     Image.new("RGB", (16, 16), "teal").save(image_buffer, format="WEBP")
     avatar_bytes = image_buffer.getvalue()
@@ -85,6 +88,8 @@ def main():
             result = subprocess.run([
                 str(CHROME), "--headless=new", "--disable-gpu", "--no-first-run",
                 "--no-default-browser-check", "--disable-background-networking",
+                "--disable-renderer-backgrounding", "--disable-background-timer-throttling",
+                "--run-all-compositor-stages-before-draw",
                 "--disable-extensions", "--disable-sync", "--user-data-dir=" + profile,
                 "--virtual-time-budget=45000", "--dump-dom",
                 f"http://127.0.0.1:{server.server_port}/"
