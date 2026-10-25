@@ -793,13 +793,6 @@ a {
     text-underline-offset: 4px;
 }
 
-.sidebar-bottom .sidebar-dashboard-return {
-    margin-top: 0;
-    min-height: 28px;
-    font-size: 11px;
-    font-weight: 500;
-}
-
 .dashboard-main {
     padding: 32px 38px;
     min-width: 0;

@@ -15,6 +15,7 @@
         consultation: '<path d="M6 3v5a4 4 0 0 0 8 0V3M4 3h4m4 0h4M10 12v3a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="10" r="3"/>',
         patient: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>',
         home: '<path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-8h6v8"/>',
+        back: '<path d="M19 12H5m7-7-7 7 7 7"/>',
         menu: '<path d="M4 6h16M4 12h16M4 18h16"/>'
     };
     function icon(name) {
@@ -42,17 +43,10 @@
         <svg class="sidebar-ecg" viewBox="0 0 220 80" fill="none" aria-hidden="true" focusable="false"><path d="M0 48h55l10-12 12 24 15-47 17 61 13-26h98"/></svg>`;
 
     const footer = sidebar.querySelector(".sidebar-bottom");
-    const existingFooterLink = footer.querySelector("a");
-    if (new URL(existingFooterLink.href).pathname.endsWith("index.html")) {
-        existingFooterLink.insertAdjacentHTML("afterbegin", icon("home"));
-    } else {
-        // Retain the existing dashboard shortcut as well as the common home link.
-        const home = document.createElement("a");
-        home.href = "index.html";
-        home.innerHTML = `${icon("home")}<span>Back to Home</span>`;
-        footer.insertBefore(home, existingFooterLink);
-        existingFooterLink.classList.add("sidebar-dashboard-return");
-    }
+    // One shared footer replaces each page's legacy fallback without duplicates.
+    footer.innerHTML = `<p>SmartHealth Patient Portal</p>
+        <a href="/index.html">${icon("home")}<span>Back to Home</span></a>
+        <a href="/dashboard.html">${icon("back")}<span>Back to Dashboard</span></a>`;
 
     const content = document.createElement("div");
     content.className = "sidebar-content";

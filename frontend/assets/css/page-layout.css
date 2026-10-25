@@ -19,6 +19,48 @@
     flex-wrap: wrap;
 }
 
+/* Compact overview heading; leave the sidebar and other page headers intact. */
+.patient-overview-heading {
+    min-width: 0;
+}
+
+.patient-overview-heading .patient-overview-label {
+    gap: 7px;
+    margin: 0 0 8px;
+    padding: 5px 9px;
+    border-color: #d9edf0;
+    border-radius: 8px;
+    background: #eef8fa;
+    font-size: 10px;
+    line-height: 1.4;
+    letter-spacing: 1.2px;
+    box-shadow: none;
+}
+
+.patient-overview-label::before {
+    content: none;
+}
+
+.patient-overview-label svg {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+}
+
+.patient-overview-heading h1 {
+    font-size: clamp(25px, 2.1vw, 29px);
+    line-height: 1.25;
+    letter-spacing: -0.6px;
+}
+
+.patient-overview-subtitle {
+    max-width: 52ch;
+    margin-top: 6px;
+    color: var(--text);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
 .dashboard-main {
     --page-block-padding: 32px;
 }

@@ -35,6 +35,22 @@
         assert(announced.length === 1 && announced[0] === selected[0], "Accessible current item differs from visual selection");
         return selected[0].textContent.trim();
     }
+    function checkFooter(context) {
+        const footer = context.query(".sidebar-bottom");
+        const links = [...footer.querySelectorAll("a")];
+        assert(footer.querySelectorAll("p").length === 1 && footer.querySelector("p").textContent === "SmartHealth Patient Portal", "Footer branding differs");
+        assert(links.length === 2, "Expected exactly two footer links without duplicates");
+        for (const [index, [href, label]] of [["/index.html", "Back to Home"], ["/dashboard.html", "Back to Dashboard"]].entries()) {
+            const link = links[index];
+            assert(link.getAttribute("href") === href && link.textContent.trim() === label, "Wrong footer link or order");
+            assert(link.querySelectorAll('svg[aria-hidden="true"]').length === 1, "Missing decorative footer icon");
+            assert(link.getBoundingClientRect().height > 0, "Footer link is hidden");
+        }
+        const style = link => context.frame.contentWindow.getComputedStyle(link);
+        for (const property of ["fontSize", "fontWeight", "color", "gap", "minHeight", "marginTop", "alignItems"]) {
+            assert(style(links[0])[property] === style(links[1])[property], "Footer links have inconsistent " + property);
+        }
+    }
     async function check(label, test) {
         try { await test(); results.push("PASS " + label); }
         catch (error) { results.push("FAIL " + label + ": " + error.message); }
@@ -47,7 +63,7 @@
             assert(context.query(".sidebar-nav a.active").getAttribute("aria-current") === "page", "Page selection not announced");
             assert(context.frame.contentDocument.querySelectorAll(".sidebar-nav a .sidebar-icon").length === 7, "Missing navigation icons");
             assert(context.query(".sidebar-heading").textContent.includes("Patient Area"), "Missing portal card");
-            assert(context.query('.sidebar-bottom a[href="index.html"]').textContent.trim() === "Back to Home", "Missing home link");
+            checkFooter(context);
             assert(context.frame.contentWindow.getComputedStyle(context.query(".sidebar-toggle")).display === "none", "Desktop toggle should be hidden");
             assert(!context.query(".sidebar-content").hidden, "Desktop navigation should be expanded");
         });
@@ -61,6 +77,7 @@
             toggle.focus();
             toggle.click();
             assert(!content.hidden && toggle.getAttribute("aria-expanded") === "true", "Menu did not open");
+            checkFooter(context);
             assert(current(context) === label, "Opening menu changed active page");
             const active = context.query(".sidebar-nav a.active");
             active.focus();
@@ -73,6 +90,25 @@
             assert(content.hidden, "Toggle did not close menu");
             assert(context.frame.contentDocument.documentElement.scrollWidth <= 390, "Mobile page has horizontal overflow");
         });
+        for (const width of [1366, 390]) {
+            for (const [href, destination] of [["/index.html", "Home"], ["/dashboard.html", "Dashboard"]]) {
+                await check(label + " footer opens " + destination + " at " + width + "px", async () => {
+                    const context = await setup(path, width);
+                    if (width <= 900) context.query(".sidebar-toggle").click();
+                    context.query(`.sidebar-bottom a[href="${href}"]`).click();
+                    await waitFor(() => context.frame.contentWindow.location.pathname === href
+                        && (destination === "Home" ? context.query(".site-header") : context.query(".sidebar-nav a.active")));
+                    if (destination === "Dashboard") {
+                        assert(current(context) === "Dashboard", "Dashboard active marker lost");
+                        if (width <= 900) {
+                            assert(context.query(".sidebar-content").hidden, "Destination mobile menu should start closed");
+                            context.query(".sidebar-toggle").click();
+                        }
+                        checkFooter(context);
+                    }
+                });
+            }
+        }
     }
     for (const [filename, label] of [["dashboard.html", "Dashboard"], ["add-reading.html", "Add Reading"], ["health-records.html", "Health Records"], ["health-trends.html", "Health Trends"], ["health-alerts.html", "Health Alerts"], ["consultation.html", "Doctor Consultation"], ["profile.html", "My Profile"]]) {
         await check("Clicking " + label + " opens its dedicated page", async () => {
