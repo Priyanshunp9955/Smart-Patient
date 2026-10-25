@@ -6,8 +6,11 @@ import re
 import subprocess
 import tempfile
 import threading
+from io import BytesIO
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 CHROME = Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe")
@@ -15,7 +18,7 @@ CHROME = Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe")
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--suite", choices=("notifications", "health-readings", "sidebar"), default="notifications")
+    parser.add_argument("--suite", choices=("notifications", "health-readings", "sidebar", "profile"), default="notifications")
     args = parser.parse_args()
     if not CHROME.is_file():
         raise SystemExit("Google Chrome is required for these browser checks.")
@@ -26,6 +29,9 @@ def main():
         html = re.sub(r'<script src="https://[^>]*></script>', "", path.read_text(encoding="utf-8"))
         pages[path.stem] = html
     scripts = {path.name: path.read_text(encoding="utf-8") for path in (ROOT / "frontend/assets/js").glob("*.js")}
+    image_buffer = BytesIO()
+    Image.new("RGB", (16, 16), "teal").save(image_buffer, format="WEBP")
+    avatar_bytes = image_buffer.getvalue()
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
@@ -38,6 +44,9 @@ def main():
             elif self.path == "/api/me":
                 data = json.dumps({"status": "success", "patient": {"id": 7, "full_name": "Test Patient"}}).encode()
                 content_type = "application/json"
+            elif self.path.startswith("/api/profile/photo?v=") and not self.path.endswith("missing"):
+                data = avatar_bytes
+                content_type = "image/webp"
             elif self.path == "/api/readings":
                 data = json.dumps({"status": "success", "readings": []}).encode()
                 content_type = "application/json"
@@ -47,7 +56,7 @@ def main():
             elif self.path.startswith("/assets/js/") and self.path[11:] in scripts:
                 data = scripts[self.path[11:]].encode("utf-8")
                 content_type = "text/javascript; charset=utf-8"
-            elif self.path in {"/assets/css/style.css", "/assets/css/notifications.css", "/assets/css/page-layout.css"}:
+            elif self.path in {"/assets/css/style.css", "/assets/css/notifications.css", "/assets/css/page-layout.css", "/assets/css/profile.css"}:
                 css = (ROOT / "frontend" / self.path.lstrip("/")).read_text(encoding="utf-8")
                 data = re.sub(r"@import[^;]+;", "", css).encode("utf-8")
                 content_type = "text/css; charset=utf-8"

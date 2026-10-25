@@ -7,6 +7,12 @@ from ..database import get_db_connection
 blueprint = Blueprint("auth", __name__)
 
 
+@blueprint.after_request
+def prevent_account_cache(response):
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 @blueprint.route("/api/register", methods=["POST"])
 def register():
     data = request.get_json(silent=True) or {}
@@ -150,13 +156,29 @@ def current_patient():
             "message": "Not logged in"
         }), 401
 
-    return jsonify({
-        "status": "success",
-        "patient": {
-            "id": session["patient_id"],
-            "full_name": session.get("full_name")
-        }
-    })
+    connection = cursor = None
+    try:
+        from .photos import photo_url
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute("SELECT id, full_name, profile_photo_version FROM patients WHERE id = %s",
+                       (session["patient_id"],))
+        patient = cursor.fetchone()
+        if patient is None:
+            session.clear()
+            return jsonify(status="error", message="Please sign in again."), 401
+        return jsonify(status="success", patient={
+            "id": patient["id"], "full_name": patient["full_name"],
+            "photo_url": photo_url(patient.get("profile_photo_version"))
+        })
+    except Error:
+        current_app.logger.exception("Account details failed to load")
+        return jsonify(status="error", message="Unable to load your account. Please try again."), 500
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if connection is not None and connection.is_connected():
+            connection.close()
 
 
 @blueprint.route("/api/logout", methods=["POST"])

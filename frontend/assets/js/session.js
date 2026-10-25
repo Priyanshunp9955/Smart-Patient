@@ -7,15 +7,39 @@
     const logoutButtons = document.querySelectorAll("[data-logout]");
     const status = document.querySelector("[data-account-status]");
     let loggingOut = false;
+    let requestId = 0;
+    let channel;
+    try {
+        channel = new BroadcastChannel("smarthealth-profile");
+    } catch (error) {
+        // Navigation and focus also refresh the shared session's account name.
+    }
 
     function showStatus(message) {
         if (status) status.textContent = message;
         if (message) window.SmartHealth.notify(message, "error");
     }
 
+    function renderAvatar(avatar, fullName, photoUrl) {
+        const parts = String(fullName || "?").trim().split(/\s+/);
+        const initials = [parts[0], ...(parts.length > 1 ? [parts[parts.length - 1]] : [])]
+            .map(part => Array.from(part)[0]).join("").toLocaleUpperCase();
+        avatar.dataset.initials = initials;
+        if (avatar.dataset.photoPreview === "true") return;
+        avatar.textContent = initials;
+        if (typeof photoUrl === "string" && photoUrl.startsWith("/api/profile/photo?")) {
+            const photo = document.createElement("img");
+            photo.alt = "";
+            photo.addEventListener("error", () => photo.remove(), { once: true });
+            photo.src = photoUrl;
+            avatar.appendChild(photo);
+        }
+    }
+    window.SmartHealth = { ...window.SmartHealth, account: { renderAvatar } };
+
     async function loadCurrentPatient() {
-        names.forEach(name => { name.textContent = "Loading account..."; });
-        avatars.forEach(avatar => { avatar.textContent = "?"; });
+        if (loggingOut) return;
+        const currentRequest = ++requestId;
         showStatus("");
 
         try {
@@ -24,7 +48,7 @@
                 cache: "no-store"
             });
 
-            if (loggingOut) return;
+            if (loggingOut || currentRequest !== requestId) return;
             if (response.status === 401) {
                 window.SmartHealth.flash("Your session has ended. Please sign in again.", "info", { title: "Sign in required" });
                 window.location.replace("/login.html");
@@ -33,21 +57,18 @@
             if (!response.ok) throw new Error("Unable to load account.");
 
             const result = await response.json();
-            if (loggingOut) return;
+            if (loggingOut || currentRequest !== requestId) return;
             const fullName = result.patient?.full_name;
             if (typeof fullName !== "string" || !fullName.trim()) {
                 throw new Error("Account name is unavailable.");
             }
 
-            const parts = fullName.trim().split(/\s+/);
-            const initials = [parts[0], ...(parts.length > 1 ? [parts[parts.length - 1]] : [])]
-                .map(part => Array.from(part)[0]).join("").toLocaleUpperCase();
-
             names.forEach(name => { name.textContent = fullName; });
-            avatars.forEach(avatar => { avatar.textContent = initials; });
+            avatars.forEach(avatar => { renderAvatar(avatar, fullName, result.patient.photo_url); });
         } catch (error) {
-            if (loggingOut) return;
+            if (loggingOut || currentRequest !== requestId) return;
             names.forEach(name => { name.textContent = "Patient Account"; });
+            avatars.forEach(avatar => { avatar.textContent = "?"; });
             showStatus("Unable to load your name. Please refresh the page.");
         }
     }
@@ -87,6 +108,22 @@
     // Refresh the session when a browser restores a page from its back/forward cache.
     window.addEventListener("pageshow", event => {
         if (event.persisted) loadCurrentPatient();
+    });
+    window.addEventListener("focus", loadCurrentPatient);
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") loadCurrentPatient();
+    });
+    window.addEventListener("smarthealth:profile-changed", () => {
+        loadCurrentPatient();
+        try {
+            // Send only a refresh signal; patient information stays out of storage.
+            channel?.postMessage("updated");
+        } catch (error) {
+            // Saving remains successful when tab messaging is unavailable.
+        }
+    });
+    channel?.addEventListener("message", event => {
+        if (event.data === "updated") loadCurrentPatient();
     });
 
     loadCurrentPatient();

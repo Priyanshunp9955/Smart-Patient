@@ -158,12 +158,14 @@ class ApplicationTests(unittest.TestCase):
             response = self.client.post("/api/login", json={"email": " TEST@EXAMPLE.COM ", "password": "password1"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.cursor.execute.call_args.args[1], ("test@example.com",))
-        self.assertEqual(self.client.get("/api/me").json["patient"], {"id": 7, "full_name": "Test Patient"})
+        with self.database("auth"):
+            self.assertEqual(self.client.get("/api/me").json["patient"], {"id": 7, "full_name": "Test Patient", "photo_url": None})
         self.assertIn("HttpOnly", response.headers["Set-Cookie"])
         self.assertIn("SameSite=Lax", response.headers["Set-Cookie"])
         self.assertEqual(self.client.post("/api/logout").json["status"], "success")
         self.assertEqual(self.client.get("/api/me").status_code, 401)
-        self.assert_closed()
+        self.assertEqual(self.cursor.close.call_count, 2)
+        self.assertEqual(self.connection.close.call_count, 2)
 
     def test_account_name_tracks_the_current_login(self):
         with self.database("auth"):
@@ -175,7 +177,7 @@ class ApplicationTests(unittest.TestCase):
                 }
                 response = self.client.post("/api/login", json={"email": "test@example.com", "password": "password1"})
                 self.assertEqual(response.status_code, 200)
-                self.assertEqual(self.client.get("/api/me").json["patient"], {"id": patient_id, "full_name": full_name})
+                self.assertEqual(self.client.get("/api/me").json["patient"], {"id": patient_id, "full_name": full_name, "photo_url": None})
                 self.assertEqual(self.client.post("/api/logout").status_code, 200)
                 self.assertEqual(self.client.get("/api/me").status_code, 401)
                 self.assertEqual(self.page_bytes("/dashboard.html"), (PAGES_DIR / "login.html").read_bytes())

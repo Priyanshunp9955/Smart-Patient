@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Patient profile browser checks</title>
+<pre id="results">RUNNING</pre>
+<script>
+"use strict";
+(async () => {
+    const fixtures = await fetch("/fixtures.json").then(response => response.json());
+    const results = [];
+    const runtimeErrors = [];
+    const pause = (ms = 20) => new Promise(resolve => setTimeout(resolve, ms));
+    function assert(condition, message) { if (!condition) throw new Error(message); }
+    async function waitFor(condition) {
+        for (let i = 0; i < 200; i++) {
+            if (condition()) return;
+            await pause();
+        }
+        throw new Error("Timed out waiting for profile");
+    }
+    function state() {
+        return { patient: { id: 7, full_name: "Test Patient", email: "test@example.com", phone: null,
+                          date_of_birth: null, gender: null, blood_group: null, photo_url: null }, calls: [], failLoad: false, failSave: false, photoVersion: 0 };
+    }
+    async function setup(database, page = "profile", width = 1200, noChannel = false) {
+        const frame = document.createElement("iframe");
+        frame.style.cssText = `width:${width}px;height:900px;border:0;display:block`;
+        const loaded = new Promise(resolve => { frame.onload = resolve; });
+        frame.srcdoc = fixtures.pages[page].replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "");
+        document.body.appendChild(frame);
+        await loaded;
+        const win = frame.contentWindow;
+        win.addEventListener("error", event => runtimeErrors.push(event.message));
+        win.addEventListener("unhandledrejection", event => runtimeErrors.push(String(event.reason)));
+        win.sessionStorage.clear();
+        if (noChannel) win.BroadcastChannel = undefined;
+        win.fetch = async (url, options = {}) => {
+            database.calls.push({ url, ...options });
+            const reply = (body, status = 200) => ({ ok: status < 400, status, json: async () => body });
+            if (url === "/api/me") return reply({ status: "success", patient: { ...database.patient } });
+            if (url === "/api/profile/photo") {
+                assert(options.headers["X-CSRF-Token"] === "csrf-value", "Photo CSRF token missing");
+                assert(options.credentials === "same-origin", "Photo session missing");
+                if (database.failPhoto) return reply({ status: "error", message: "Unable to update your profile photo. Please try again." }, 500);
+                if (options.method === "POST") {
+                    assert(options.body instanceof win.FormData, "Photo was not sent as multipart data");
+                    assert(options.body.get("photo") instanceof win.File, "Photo file missing");
+                    assert([...options.body.keys()].join() === "photo", "Unexpected upload identifiers");
+                    assert(!options.headers["Content-Type"], "Multipart boundary was overridden");
+                    if (database.delayPhoto) await new Promise(resolve => { database.releasePhoto = resolve; });
+                    database.patient.photo_url = "/api/profile/photo?v=" + (++database.photoVersion);
+                } else {
+                    assert(options.method === "DELETE" && !options.body, "Invalid removal request");
+                    database.patient.photo_url = null;
+                }
+                return reply({ status: "success", photo_url: database.patient.photo_url,
+                    message: options.method === "POST" ? "Profile photo updated successfully." : "Profile photo removed successfully." });
+            }
+            assert(url === "/api/profile", "Unexpected endpoint " + url);
+            if (options.method === "PUT") {
+                assert(options.credentials === "same-origin", "Missing session credentials");
+                assert(options.headers["X-CSRF-Token"] === "csrf-value", "Missing CSRF token");
+                const data = JSON.parse(options.body);
+                assert(!("email" in data) && !("id" in data), "Read-only identity sent in update");
+                if (database.failSave) return reply({ status: "error", message: "Unable to save your profile. Please try again." }, 500);
+                if (database.delaySave) await new Promise(resolve => { database.releaseSave = resolve; });
+                database.patient = { ...database.patient, ...data, full_name: data.full_name.trim() };
+            } else if (database.failLoad) {
+                return reply({ status: "error", message: "Unable to load your profile. Please try again." }, 500);
+            }
+            return reply({ status: "success", patient: { ...database.patient }, csrf_token: "csrf-value", message: "Profile updated successfully." });
+        };
+        for (const name of ["notifications.js", "session.js", ...(page === "profile" ? ["profile.js", "profile-photo.js"] : [])]) {
+            win.eval(fixtures.scripts[name]);
+        }
+        const query = selector => frame.contentDocument.querySelector(selector);
+        await waitFor(() => query("[data-patient-name]").textContent === database.patient.full_name);
+        if (page === "profile") await waitFor(() => !query("#profileContent").hidden || !query("#retryProfile").hidden);
+        return { frame, win, query };
+    }
+    async function check(label, test) {
+        try { await test(); results.push("PASS " + label); }
+        catch (error) { results.push("FAIL " + label + ": " + error.message); }
+        document.querySelectorAll("iframe").forEach(frame => frame.remove());
+    }
+    function edit(context, changes = {}) {
+        context.query("#editProfile").click();
+        for (const [name, value] of Object.entries(changes)) context.query(`[name="${name}"]`).value = value;
+    }
+    function submit(context) { context.query("#profileForm").requestSubmit(); }
+    function choosePhoto(context, options = {}) {
+        const canvas = context.frame.contentDocument.createElement("canvas");
+        canvas.width = canvas.height = 20;
+        const painter = canvas.getContext("2d");
+        painter.fillStyle = options.color || "red";
+        painter.fillRect(0, 0, 20, 20);
+        const binary = atob(canvas.toDataURL("image/png").split(",")[1]);
+        const bytes = context.win.Uint8Array.from(binary, char => char.charCodeAt(0));
+        const file = new context.win.File([options.content || bytes], options.name || "avatar.png", { type: options.type || "image/png" });
+        const transfer = new context.win.DataTransfer();
+        transfer.items.add(file);
+        context.query("#profilePhotoFile").files = transfer.files;
+        context.query("#profilePhotoFile").dispatchEvent(new context.win.Event("change"));
+    }
+
+    await check("Saved fields display and email remains read-only", async () => {
+        const database = state();
+        database.patient.phone = "+91 98765 43210";
+        database.patient.date_of_birth = "2000-02-29";
+        database.patient.gender = "Female";
+        database.patient.blood_group = "AB+";
+        const context = await setup(database);
+        for (const [field, value] of Object.entries(database.patient)) {
+            const element = context.query(`[data-profile-field="${field}"]`);
+            if (element) assert(element.textContent === value, "Wrong displayed " + field);
+        }
+        edit(context);
+        assert(context.query("#profileEmail").readOnly, "Email can be edited");
+        assert(context.query("#profileEmail").value === database.patient.email, "Email missing");
+        assert(!context.query('input[type="password"]'), "Password input exposed");
+    });
+    await check("Save updates all details and account name", async () => {
+        const database = state();
+        const context = await setup(database);
+        edit(context, { full_name: "Updated Patient", phone: "+91 91234 56789", date_of_birth: "1995-05-20", gender: "Non-binary", blood_group: "O+" });
+        submit(context);
+        await waitFor(() => context.query("#profileStatus").classList.contains("success"));
+        await waitFor(() => context.query("[data-patient-name]").textContent === "Updated Patient");
+        assert(context.query("#profileForm").hidden, "Edit mode remains open");
+        assert(context.query('[data-profile-field="blood_group"]').textContent === "O+", "Saved blood group missing");
+        assert(context.query("#profileStatus").textContent === "Profile updated successfully.", "Success feedback missing");
+    });
+    await check("Cancel restores saved values without a write", async () => {
+        const database = state();
+        const context = await setup(database);
+        edit(context, { full_name: "Unsaved Name", phone: "1234567" });
+        context.query("#cancelProfile").click();
+        assert(!database.calls.some(call => call.method === "PUT"), "Cancel wrote to API");
+        edit(context);
+        assert(context.query("#fullName").value === "Test Patient", "Unsaved name remained");
+        assert(context.query("#profilePhone").value === "", "Unsaved phone remained");
+    });
+    await check("Invalid phone, blank name, and future birth date prevent saves", async () => {
+        const database = state();
+        const context = await setup(database);
+        edit(context, { phone: "123" });
+        submit(context);
+        assert(context.query("#profileStatus").classList.contains("error"), "Phone validation absent");
+        context.query("#profilePhone").value = "";
+        context.query("#fullName").value = "   ";
+        submit(context);
+        assert(context.query("#profileStatus").textContent === "Enter your full name.", "Blank name accepted");
+        context.query("#fullName").value = "Valid Patient";
+        context.query("#dateOfBirth").value = "2999-01-01";
+        assert(!context.query("#profileForm").checkValidity(), "Future date accepted");
+        assert(!database.calls.some(call => call.method === "PUT"), "Invalid fields sent to API");
+    });
+    await check("Failed save preserves edits and permits retry", async () => {
+        const database = state();
+        const context = await setup(database);
+        database.failSave = true;
+        edit(context, { full_name: "Retry Patient" });
+        submit(context);
+        await waitFor(() => context.query("#profileStatus").classList.contains("error"));
+        assert(!context.query("#profileFields").disabled, "Form stayed disabled");
+        assert(context.query("#fullName").value === "Retry Patient", "Edits lost after error");
+        database.failSave = false;
+        submit(context);
+        await waitFor(() => context.query("#profileStatus").classList.contains("success"));
+    });
+    await check("Failed load offers retry and recovers", async () => {
+        const database = state();
+        database.failLoad = true;
+        const context = await setup(database);
+        assert(context.query("#profileContent").hidden, "Empty editable profile exposed");
+        database.failLoad = false;
+        context.query("#retryProfile").click();
+        await waitFor(() => !context.query("#profileContent").hidden);
+        assert(context.query("#retryProfile").hidden, "Retry remained after recovery");
+    });
+    await check("Pending save disables fields and prevents duplicate writes", async () => {
+        const database = state();
+        const context = await setup(database);
+        database.delaySave = true;
+        edit(context, { full_name: "One Save" });
+        submit(context);
+        await waitFor(() => database.releaseSave);
+        assert(context.query("#profileFields").disabled, "Fields editable while saving");
+        context.query("#profileForm").dispatchEvent(new context.win.Event("submit", { cancelable: true }));
+        assert(database.calls.filter(call => call.method === "PUT").length === 1, "Duplicate save sent");
+        database.releaseSave();
+        await waitFor(() => context.query("#profileStatus").classList.contains("success"));
+    });
+    await check("Profile text renders safely", async () => {
+        const database = state();
+        database.patient.full_name = '<img src=x onerror="window.profileXSS=true">';
+        const context = await setup(database);
+        assert(context.query("#summaryName").textContent === database.patient.full_name, "Name lost");
+        assert(!context.query("#summaryName img") && !context.win.profileXSS, "Name interpreted as markup");
+    });
+    await check("Saving refreshes the name in an already open Dashboard", async () => {
+        const database = state();
+        const dashboard = await setup(database, "dashboard");
+        const profile = await setup(database);
+        edit(profile, { full_name: "Synchronized Patient" });
+        submit(profile);
+        await waitFor(() => dashboard.query("[data-patient-name]").textContent === "Synchronized Patient");
+        assert(dashboard.query("[data-patient-initials]").textContent === "SP", "Initials stale");
+    });
+    await check("Focus refresh works without BroadcastChannel", async () => {
+        const database = state();
+        const dashboard = await setup(database, "dashboard", 1200, true);
+        database.patient.full_name = "Focus Patient";
+        dashboard.win.dispatchEvent(new dashboard.win.Event("focus"));
+        await waitFor(() => dashboard.query("[data-patient-name]").textContent === "Focus Patient");
+    });
+    for (const width of [360, 390, 768, 1440]) {
+        await check(`Profile fits the viewport at ${width}px`, async () => {
+            const context = await setup(state(), "profile", width);
+            edit(context);
+            await pause(100);
+            const doc = context.frame.contentDocument;
+            assert(doc.documentElement.scrollWidth <= width + 1, "Page overflows horizontally");
+            for (const element of doc.querySelectorAll("#profileForm input, #profileForm select")) {
+                const rect = element.getBoundingClientRect();
+                assert(rect.left >= 0 && rect.right <= width + 1, "Control outside viewport");
+            }
+        });
+    }
+    await check("Photo selection previews without uploading and Cancel restores initials", async () => {
+        const database = state();
+        const context = await setup(database);
+        choosePhoto(context);
+        await waitFor(() => !context.query("#photoPreviewActions").hidden);
+        assert(context.query("#profilePhotoAvatar img").src.startsWith("blob:"), "Local preview missing");
+        assert(!database.calls.some(call => call.url === "/api/profile/photo"), "Selection uploaded without Save Photo");
+        assert(!context.query(".patient-account-link img"), "Unsaved preview reached account avatar");
+        context.query("#cancelProfilePhoto").click();
+        assert(!context.query("#profilePhotoAvatar img"), "Cancel left preview visible");
+        assert(context.query("#profilePhotoAvatar").textContent === "TP", "Initials missing");
+    });
+    await check("Photo upload refreshes account avatars and survives opening Profile again", async () => {
+        const database = state();
+        const dashboard = await setup(database, "dashboard");
+        const context = await setup(database);
+        choosePhoto(context);
+        await waitFor(() => !context.query("#photoPreviewActions").hidden);
+        context.query("#saveProfilePhoto").click();
+        await waitFor(() => context.query("#photoStatus").classList.contains("success"));
+        await waitFor(() => dashboard.query(".patient-account-link img")?.complete);
+        assert(context.query("#photoPreviewActions").hidden, "Preview actions remained");
+        assert(!context.query("#removeProfilePhoto").hidden, "Remove option missing");
+        assert(context.query(".photo-upload-label").textContent === "Change Profile Photo", "Change option missing");
+        const reopened = await setup(database);
+        await waitFor(() => reopened.query("#profilePhotoAvatar img")?.naturalWidth > 0);
+        assert(reopened.query(".patient-account-link img"), "Account photo did not persist");
+    });
+    await check("Changing a photo uses a fresh URL and removal restores initials across pages", async () => {
+        const database = state();
+        database.patient.photo_url = "/api/profile/photo?v=original";
+        const dashboard = await setup(database, "dashboard");
+        const context = await setup(database);
+        choosePhoto(context, { color: "blue" });
+        await waitFor(() => !context.query("#photoPreviewActions").hidden);
+        context.query("#saveProfilePhoto").click();
+        await waitFor(() => context.query("#photoStatus").classList.contains("success"));
+        assert(database.patient.photo_url !== "/api/profile/photo?v=original", "Changed image URL is stale");
+        context.query("#removeProfilePhoto").click();
+        await waitFor(() => context.query("#photoStatus").textContent === "Profile photo removed successfully.");
+        await waitFor(() => !dashboard.query(".patient-account-link img"));
+        assert(!context.query("#profilePhotoAvatar img"), "Removed photo remains in summary");
+        assert(context.query("#profilePhotoAvatar").textContent === "TP", "Removed photo did not restore initials");
+    });
+    await check("Invalid type and files above 2 MB are rejected before upload", async () => {
+        const database = state();
+        const context = await setup(database);
+        choosePhoto(context, { name: "evil.svg", type: "image/svg+xml" });
+        assert(context.query("#photoStatus").classList.contains("error"), "Invalid type accepted");
+        choosePhoto(context, { content: new context.win.Uint8Array(2 * 1024 * 1024 + 1) });
+        assert(context.query("#photoStatus").textContent.includes("2 MB"), "Size error missing");
+        assert(!database.calls.some(call => call.url === "/api/profile/photo"), "Invalid photo sent to API");
+    });
+    await check("Failed upload keeps the preview and permits retry", async () => {
+        const database = state();
+        const context = await setup(database);
+        choosePhoto(context);
+        await waitFor(() => !context.query("#photoPreviewActions").hidden);
+        database.failPhoto = true;
+        context.query("#saveProfilePhoto").click();
+        await waitFor(() => context.query("#photoStatus").classList.contains("error"));
+        assert(!context.query("#photoPreviewActions").hidden, "Failed upload discarded preview");
+        assert(!context.query("#saveProfilePhoto").disabled, "Retry button disabled");
+        database.failPhoto = false;
+        context.query("#saveProfilePhoto").click();
+        await waitFor(() => context.query("#photoStatus").classList.contains("success"));
+    });
+    await check("Failed removal preserves the saved avatar", async () => {
+        const database = state();
+        database.patient.photo_url = "/api/profile/photo?v=saved";
+        const context = await setup(database);
+        database.failPhoto = true;
+        context.query("#removeProfilePhoto").click();
+        await waitFor(() => context.query("#photoStatus").classList.contains("error"));
+        assert(context.query("#profilePhotoAvatar img"), "Photo lost after failed removal");
+        assert(!context.query("#removeProfilePhoto").disabled, "Removal retry disabled");
+    });
+    await check("Pending photo upload prevents duplicate requests", async () => {
+        const database = state();
+        database.delayPhoto = true;
+        const context = await setup(database);
+        choosePhoto(context);
+        await waitFor(() => !context.query("#photoPreviewActions").hidden);
+        context.query("#saveProfilePhoto").click();
+        await waitFor(() => database.releasePhoto);
+        context.query("#saveProfilePhoto").dispatchEvent(new context.win.Event("click"));
+        assert(database.calls.filter(call => call.url === "/api/profile/photo").length === 1, "Duplicate photo upload");
+        assert(context.query("#profilePhotoFile").disabled, "Selection enabled while uploading");
+        database.releasePhoto();
+        await waitFor(() => context.query("#photoStatus").classList.contains("success"));
+    });
+    await check("Unavailable images fall back to initials", async () => {
+        const database = state();
+        database.patient.photo_url = "/api/profile/photo?v=missing";
+        const context = await setup(database);
+        await waitFor(() => !context.query("#profilePhotoAvatar img") && !context.query(".patient-account-link img"));
+        assert(context.query(".patient-account-link [data-patient-initials]").textContent === "TP", "Initials fallback missing");
+    });
+    for (const page of ["dashboard", "add-reading", "consultation", "profile"]) {
+        await check(`The ${page} account links avatar and name to Profile with a separate Logout`, async () => {
+            const context = await setup(state(), page, 390);
+            const link = context.query(".patient-account-link");
+            assert(link.getAttribute("href") === "profile.html", "Wrong account destination");
+            assert(link.contains(context.query("[data-patient-initials]")), "Avatar outside link");
+            assert(link.contains(context.query("[data-patient-name]")), "Name outside link");
+            assert(link.textContent.includes("Patient Account"), "Account caption outside link");
+            assert(!link.contains(context.query("[data-logout]")), "Logout is inside account link");
+            assert(context.query("[data-logout]").tagName === "BUTTON", "Logout is no longer a button");
+        });
+    }
+    await check("Clicking the account section navigates to My Profile", async () => {
+        const context = await setup(state(), "dashboard");
+        context.query(".patient-account-link").click();
+        await waitFor(() => context.frame.contentWindow.location.pathname === "/profile.html");
+        assert(context.frame.contentDocument.title === "My Profile | SmartHealth", "Account link opened wrong page");
+    });
+    await check("No JavaScript runtime failures", async () => { assert(runtimeErrors.length === 0, runtimeErrors.join("; ")); });
+    document.querySelector("#results").textContent = results.join("\n") + "\nDONE";
+})().catch(error => { document.querySelector("#results").textContent = "FAIL " + error.stack; });
+</script>
+</html>

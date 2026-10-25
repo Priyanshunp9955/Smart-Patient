@@ -40,7 +40,7 @@
         catch (error) { results.push("FAIL " + label + ": " + error.message); }
         document.querySelectorAll("iframe").forEach(frame => frame.remove());
     }
-    for (const [path, label] of [["/dashboard.html", "Dashboard"], ["/add-reading.html", "Add Reading"], ["/consultation.html", "Doctor Consultation"]]) {
+    for (const [path, label] of [["/dashboard.html", "Dashboard"], ["/add-reading.html", "Add Reading"], ["/consultation.html", "Doctor Consultation"], ["/profile.html", "My Profile"]]) {
         await check(label + " is selected on its page", async () => {
             const context = await setup(path);
             assert(current(context) === label, "Wrong page selected");

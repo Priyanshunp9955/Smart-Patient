@@ -1,0 +1,51 @@
+/* Profile styles use the patient portal's shared colors, cards, and controls. */
+[hidden] { display: none !important; }
+
+.patient-profile-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.8fr) minmax(0, 2fr);
+    gap: 24px;
+    align-items: start;
+}
+.patient-profile-layout > * { min-width: 0; }
+.patient-profile-summary { text-align: center; }
+.patient-profile-avatar { width: 76px; height: 76px; font-size: 24px; margin: 0 auto 18px; }
+.profile-photo-controls { position: relative; margin-bottom: 22px; }
+.photo-upload-label { display: inline-block; cursor: pointer; max-width: 100%; }
+.profile-photo-file { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; }
+.profile-photo-controls:focus-within .photo-upload-label { outline: 2px solid var(--primary); outline-offset: 3px; }
+.profile-photo-controls p { margin: 10px 0; font-size: 11px; }
+.photo-text-button { display: inline-block; border: 0; background: transparent; color: var(--primary); font: inherit; font-size: 12px; padding: 9px; cursor: pointer; text-decoration: underline; }
+.profile-photo-controls button:disabled { opacity: 0.65; cursor: wait; }
+.profile-photo-controls[aria-busy="true"] .photo-upload-label { opacity: 0.65; cursor: wait; }
+.patient-profile-summary h2 { color: var(--heading); font-size: 21px; overflow-wrap: anywhere; }
+.patient-profile-summary > p { margin: 6px 0 16px; font-size: 13px; overflow-wrap: anywhere; }
+.patient-account-badge { display: inline-block; border-radius: 20px; padding: 6px 14px; font-size: 12px; color: var(--primary); background: #e9f7f7; }
+.profile-privacy-note { text-align: left; border-top: 1px solid var(--border); margin-top: 28px; padding-top: 22px; }
+.profile-privacy-note h3 { color: var(--heading); font-size: 14px; margin-bottom: 8px; }
+.profile-privacy-note p { font-size: 12px; line-height: 1.8; }
+.patient-profile-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.patient-profile-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px; }
+.patient-profile-details dt { color: #536779; font-size: 12px; margin-bottom: 6px; }
+.patient-profile-details dd { color: var(--heading); font-size: 14px; font-weight: 500; margin: 0; overflow-wrap: anywhere; }
+.patient-profile-card fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.patient-profile-card input, .patient-profile-card select { min-width: 0; width: 100%; font: inherit; font-size: 14px; }
+.patient-profile-card select { padding: 13px 14px; background: white; border: 1px solid var(--border); border-radius: 9px; color: var(--heading); }
+.patient-profile-card select:focus { outline: 2px solid var(--primary); outline-offset: 2px; }
+.patient-profile-card input[readonly] { background: #f5f8fb; color: #536779; }
+.patient-profile-card small { display: block; margin-top: 6px; font-size: 11px; }
+.patient-profile-card button { cursor: pointer; }
+.patient-profile-card button:disabled { opacity: 0.65; cursor: wait; }
+.profile-status { margin-bottom: 20px; font-size: 14px; }
+.profile-status:empty { display: none; }
+.profile-status.error { color: #b42318; }
+.profile-status.success { color: #087443; }
+.profile-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+@media (max-width: 1100px) {
+    .patient-profile-layout { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 650px) {
+    .patient-profile-details { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+    .patient-profile-heading { flex-wrap: wrap; }
+}
