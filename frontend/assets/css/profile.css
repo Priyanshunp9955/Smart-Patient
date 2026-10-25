@@ -1,4 +1,73 @@
-/* Profile styles use the patient portal's shared colors, cards, and controls. */
+/* Profile layout and page-scoped lavender accents. */
+.profile-page {
+    --primary: #7043ad;
+    --primary-dark: #57318c;
+    --heading: #30233f;
+    --text: #62566f;
+    --border: #e8dff1;
+    background-color: #f6f1fc;
+    background-image:
+        radial-gradient(circle at 95% 15%, transparent 0 105px, rgba(157, 119, 207, 0.07) 106px 155px, transparent 156px),
+        radial-gradient(ellipse at 82% 4%, rgba(191, 160, 232, 0.23), transparent 48%),
+        radial-gradient(ellipse at 18% 90%, rgba(212, 190, 242, 0.25), transparent 45%),
+        linear-gradient(135deg, #fcfaff 0%, #f1e9fb 55%, #faf7ff 100%);
+}
+
+.profile-page .reading-form-card {
+    background: #ffffff;
+    border-color: var(--border);
+    border-radius: 20px;
+    box-shadow: 0 12px 36px rgba(74, 43, 112, 0.06), 0 2px 6px rgba(74, 43, 112, 0.03);
+}
+
+.profile-page .sidebar-nav a:hover,
+.profile-page .sidebar-nav a.active,
+.profile-page .patient-account-link:hover,
+.profile-page .patient-account-badge {
+    background: #f0e8fa;
+}
+
+.profile-page .profile-avatar {
+    background: linear-gradient(145deg, #a17bd2, #7043ad);
+    box-shadow: 0 0 0 4px rgba(159, 119, 211, 0.1);
+}
+
+.profile-page .patient-profile-details dt { color: #6b5e79; }
+
+.profile-page .patient-profile-layout .logout-button {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
+    box-shadow: 0 3px 9px rgba(112, 67, 173, 0.12);
+}
+
+.profile-page .patient-profile-layout .logout-button:hover,
+.profile-page .auth-submit:hover {
+    background: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+.profile-page .secondary-button {
+    color: var(--primary);
+    background: #f7f2fd;
+    border-color: #dcccec;
+}
+
+.profile-page .secondary-button:hover,
+.profile-page .photo-text-button:hover { background: #eee4f9; }
+
+.profile-page .patient-profile-card :is(input, select) { border-color: #dcd1e7; }
+.profile-page .patient-profile-card :is(input, select):focus {
+    border-color: #956bc8;
+    box-shadow: 0 0 0 3px rgba(112, 67, 173, 0.13);
+    outline: none;
+}
+.profile-page .patient-profile-card input[readonly] { background: #faf7fd; color: #6b5e79; }
+.profile-page .patient-profile-card :is(button, a):focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 3px;
+}
+
 [hidden] { display: none !important; }
 
 .patient-profile-layout {
@@ -41,9 +110,13 @@
 .profile-status.error { color: #b42318; }
 .profile-status.success { color: #087443; }
 .profile-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.password-change-card { grid-column: 2; }
+.password-change-card .profile-status { margin-top: 18px; margin-bottom: 0; }
+.password-change-card .password-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 
 @media (max-width: 1100px) {
     .patient-profile-layout { grid-template-columns: minmax(0, 1fr); }
+    .password-change-card { grid-column: auto; }
 }
 @media (max-width: 650px) {
     .patient-profile-details { grid-template-columns: minmax(0, 1fr); gap: 20px; }

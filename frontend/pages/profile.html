@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="/assets/css/notifications.css">
     <link rel="stylesheet" href="/assets/css/profile.css">
 </head>
-<body class="dashboard-page">
+<body class="dashboard-page profile-page">
     <div class="dashboard-layout">
         <aside class="dashboard-sidebar">
             <a href="index.html" class="logo dashboard-logo">
@@ -142,10 +142,48 @@
                             </fieldset>
                         </form>
                     </section>
+                    <section class="reading-form-card patient-profile-card password-change-card" aria-labelledby="passwordHeading">
+                        <div class="reading-form-heading">
+                            <h2 id="passwordHeading">Change Password</h2>
+                            <p id="passwordHelp">Choose a new password with at least 8 characters, different from your current password.</p>
+                        </div>
+                        <form id="changePasswordForm" aria-describedby="passwordHelp">
+                            <fieldset id="changePasswordFields">
+                                <legend class="profile-sr-only">Change your account password</legend>
+                                <div class="form-group">
+                                    <label for="currentPassword">Current Password *</label>
+                                    <div class="password-field">
+                                        <input id="currentPassword" name="current_password" type="password" autocomplete="current-password" maxlength="1024" required>
+                                        <button type="button" class="password-toggle" data-change-password-toggle="currentPassword" aria-controls="currentPassword" aria-label="Show current password" aria-pressed="false">Show</button>
+                                    </div>
+                                </div>
+                                <div class="reading-form-grid">
+                                    <div class="form-group">
+                                        <label for="newPassword">New Password *</label>
+                                        <div class="password-field">
+                                            <input id="newPassword" name="new_password" type="password" autocomplete="new-password" minlength="8" maxlength="1024" required>
+                                            <button type="button" class="password-toggle" data-change-password-toggle="newPassword" aria-controls="newPassword" aria-label="Show new password" aria-pressed="false">Show</button>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="confirmNewPassword">Confirm New Password *</label>
+                                        <div class="password-field">
+                                            <input id="confirmNewPassword" name="confirm_password" type="password" autocomplete="new-password" minlength="8" maxlength="1024" required>
+                                            <button type="button" class="password-toggle" data-change-password-toggle="confirmNewPassword" aria-controls="confirmNewPassword" aria-label="Show password confirmation" aria-pressed="false">Show</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="reading-form-actions">
+                                    <button id="updatePassword" type="submit" class="auth-submit">Update Password</button>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <p id="passwordStatus" class="profile-status" role="status" aria-live="polite"></p>
+                    </section>
                 </div>
                 <noscript><p>Enable JavaScript to view and edit your profile.</p></noscript>
             </div>
-            <footer class="dashboard-footer">SmartHealth | Academic Project Demo</footer>
+            <footer class="dashboard-footer">SmartHealth | TDP Project-2026</footer>
         </main>
     </div>
     <script src="/assets/js/notifications.js"></script>

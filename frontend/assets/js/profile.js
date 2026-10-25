@@ -141,5 +141,100 @@
     window.addEventListener("pageshow", event => {
         if (event.persisted && form.hidden && !saving) load();
     });
+
+    const passwordForm = document.getElementById("changePasswordForm");
+    const passwordFields = document.getElementById("changePasswordFields");
+    const passwordButton = document.getElementById("updatePassword");
+    const passwordStatus = document.getElementById("passwordStatus");
+    const passwordInputs = [...passwordForm.querySelectorAll("input")];
+    const passwordToggles = [...passwordForm.querySelectorAll("[data-change-password-toggle]")];
+    let updatingPassword = false;
+
+    function passwordFeedback(message, type = "") {
+        passwordStatus.textContent = message;
+        passwordStatus.className = "profile-status " + type;
+        if (type) window.SmartHealth.notify(message, type);
+    }
+    function clearPasswords() {
+        passwordForm.reset();
+        passwordInputs.forEach(input => { input.value = ""; input.type = "password"; });
+        passwordToggles.forEach(toggle => {
+            toggle.textContent = "Show";
+            toggle.setAttribute("aria-pressed", "false");
+            toggle.setAttribute("aria-label", "Show " + toggle.dataset.passwordLabel);
+        });
+    }
+    passwordToggles.forEach(toggle => {
+        toggle.dataset.passwordLabel = toggle.getAttribute("aria-label").slice(5);
+        toggle.addEventListener("click", () => {
+            if (updatingPassword) return;
+            const input = document.getElementById(toggle.dataset.changePasswordToggle);
+            const showing = input.type === "password";
+            input.type = showing ? "text" : "password";
+            toggle.textContent = showing ? "Hide" : "Show";
+            toggle.setAttribute("aria-pressed", String(showing));
+            toggle.setAttribute("aria-label", (showing ? "Hide " : "Show ") + toggle.dataset.passwordLabel);
+        });
+    });
+    passwordForm.addEventListener("submit", async event => {
+        event.preventDefault();
+        if (updatingPassword || !passwordForm.reportValidity()) return;
+        const current = document.getElementById("currentPassword");
+        const next = document.getElementById("newPassword");
+        const confirmation = document.getElementById("confirmNewPassword");
+        if (Array.from(next.value).length < 8) {
+            passwordFeedback("New password must be at least 8 characters.", "error");
+            next.focus();
+            return;
+        }
+        if (next.value !== confirmation.value) {
+            passwordFeedback("New passwords do not match.", "error");
+            confirmation.focus();
+            return;
+        }
+        if (next.value === current.value) {
+            passwordFeedback("New password must differ from your current password.", "error");
+            next.focus();
+            return;
+        }
+        if (!csrfToken) {
+            passwordFeedback("Reload your profile before changing your password.", "error");
+            return;
+        }
+        updatingPassword = true;
+        passwordFields.disabled = true;
+        passwordForm.setAttribute("aria-busy", "true");
+        passwordButton.textContent = "Updating...";
+        passwordFeedback("Updating your password...");
+        try {
+            const response = await fetch("/api/change-password", {
+                method: "POST", credentials: "same-origin", cache: "no-store",
+                headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
+                body: JSON.stringify({ current_password: current.value, new_password: next.value, confirm_password: confirmation.value })
+            });
+            if (response.status === 401) {
+                window.SmartHealth.flash("Your session has ended. Please sign in again.", "info");
+                window.location.replace("/login.html");
+                return;
+            }
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || result.status !== "success") {
+                throw new Error(result.message || "Unable to update your password. Please try again.");
+            }
+            passwordFeedback(result.message, "success");
+        } catch (error) {
+            passwordFeedback(error.message || "Unable to update your password. Please try again.", "error");
+        } finally {
+            clearPasswords();
+            updatingPassword = false;
+            passwordFields.disabled = false;
+            passwordForm.removeAttribute("aria-busy");
+            passwordButton.textContent = "Update Password";
+        }
+    });
+    window.addEventListener("pagehide", clearPasswords);
+    window.addEventListener("pageshow", event => {
+        if (event.persisted) clearPasswords();
+    });
     load();
 })();

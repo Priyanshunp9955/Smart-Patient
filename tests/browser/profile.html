@@ -38,6 +38,19 @@
             database.calls.push({ url, ...options });
             const reply = (body, status = 200) => ({ ok: status < 400, status, json: async () => body });
             if (url === "/api/me") return reply({ status: "success", patient: { ...database.patient } });
+            if (url === "/api/change-password") {
+                assert(options.method === "POST", "Password method incorrect");
+                assert(options.credentials === "same-origin" && options.cache === "no-store", "Password session/cache protection missing");
+                assert(options.headers["X-CSRF-Token"] === "csrf-value", "Password CSRF token missing");
+                const data = JSON.parse(options.body);
+                assert(Object.keys(data).sort().join() === "confirm_password,current_password,new_password", "Unexpected password fields");
+                if (database.expiredPassword) return reply({ status: "error", message: "Please log in first." }, 401);
+                if (database.failPasswordNetwork) throw new Error("Connection unavailable");
+                if (database.wrongPassword) return reply({ status: "error", message: "Current password is incorrect." }, 400);
+                if (database.failPassword) return reply({ status: "error", message: "Unable to update your password. Please try again." }, 500);
+                if (database.delayPassword) await new Promise(resolve => { database.releasePassword = resolve; });
+                return reply({ status: "success", message: "Password updated successfully. Use your new password the next time you sign in." });
+            }
             if (url === "/api/profile/photo") {
                 assert(options.headers["X-CSRF-Token"] === "csrf-value", "Photo CSRF token missing");
                 assert(options.credentials === "same-origin", "Photo session missing");
@@ -88,6 +101,12 @@
         for (const [name, value] of Object.entries(changes)) context.query(`[name="${name}"]`).value = value;
     }
     function submit(context) { context.query("#profileForm").requestSubmit(); }
+    function fillPasswords(context, changes = {}) {
+        for (const [id, value] of Object.entries({ currentPassword: "Original Test Password 1", newPassword: "Updated Test Password 2", confirmNewPassword: "Updated Test Password 2", ...changes })) {
+            context.query("#" + id).value = value;
+        }
+    }
+    function submitPassword(context) { context.query("#changePasswordForm").requestSubmit(); }
     function choosePhoto(context, options = {}) {
         const canvas = context.frame.contentDocument.createElement("canvas");
         canvas.width = canvas.height = 20;
@@ -117,7 +136,7 @@
         edit(context);
         assert(context.query("#profileEmail").readOnly, "Email can be edited");
         assert(context.query("#profileEmail").value === database.patient.email, "Email missing");
-        assert(!context.query('input[type="password"]'), "Password input exposed");
+        assert(!context.query('#profileForm input[type="password"]'), "Password input exposed in personal information");
     });
     await check("Save updates all details and account name", async () => {
         const database = state();
@@ -343,6 +362,124 @@
         await waitFor(() => context.frame.contentWindow.location.pathname === "/profile.html");
         assert(context.frame.contentDocument.title === "My Profile | SmartHealth", "Account link opened wrong page");
     });
+    await check("Password fields are masked by default and each Show/Hide control works", async () => {
+        const context = await setup(state());
+        fillPasswords(context);
+        for (const toggle of context.frame.contentDocument.querySelectorAll("[data-change-password-toggle]")) {
+            const input = context.query("#" + toggle.dataset.changePasswordToggle);
+            assert(input.type === "password", "Password shown by default");
+            toggle.click();
+            assert(input.type === "text" && toggle.getAttribute("aria-pressed") === "true", "Show failed");
+            toggle.click();
+            assert(input.type === "password" && toggle.getAttribute("aria-pressed") === "false", "Hide failed");
+        }
+    });
+    await check("Password validation rejects mismatches, reuse, and short passwords without a request", async () => {
+        const database = state();
+        const context = await setup(database);
+        fillPasswords(context, { confirmNewPassword: "Mismatch Password" });
+        submitPassword(context);
+        assert(context.query("#passwordStatus").textContent === "New passwords do not match.", "Mismatch validation missing");
+        fillPasswords(context, { newPassword: "Original Test Password 1", confirmNewPassword: "Original Test Password 1" });
+        submitPassword(context);
+        assert(context.query("#passwordStatus").textContent.includes("differ"), "Reuse validation missing");
+        fillPasswords(context, { newPassword: "short", confirmNewPassword: "short" });
+        submitPassword(context);
+        assert(!database.calls.some(call => call.url === "/api/change-password"), "Invalid password sent to API");
+    });
+    await check("Password success clears and remasks fields without changing profile details", async () => {
+        const database = state();
+        const context = await setup(database);
+        const original = JSON.stringify(database.patient);
+        fillPasswords(context);
+        context.query('[data-change-password-toggle="newPassword"]').click();
+        submitPassword(context);
+        await waitFor(() => context.query("#passwordStatus").classList.contains("success"));
+        assert(JSON.stringify(database.patient) === original, "Password change altered profile details");
+        for (const input of context.frame.contentDocument.querySelectorAll("#changePasswordForm input")) {
+            assert(!input.value && input.type === "password", "Password retained or unmasked after save");
+        }
+        assert(context.query("#updatePassword").textContent === "Update Password", "Button did not reset");
+        assert(!context.query("#changePasswordFields").disabled, "Fields remained disabled");
+        for (const storage of [context.win.localStorage, context.win.sessionStorage]) {
+            for (let i = 0; i < storage.length; i++) {
+                const value = storage.getItem(storage.key(i));
+                assert(!value.includes("Original Test Password 1") && !value.includes("Updated Test Password 2"), "Password saved in browser storage");
+            }
+        }
+    });
+    await check("Incorrect current password stays on Profile and permits retry", async () => {
+        const database = state();
+        database.wrongPassword = true;
+        const context = await setup(database);
+        fillPasswords(context);
+        submitPassword(context);
+        await waitFor(() => context.query("#passwordStatus").classList.contains("error"));
+        assert(context.query("#passwordStatus").textContent === "Current password is incorrect.", "Wrong-current-password feedback missing");
+        assert(context.query("#profileContent"), "Wrong current password redirected to login");
+        assert(!context.query("#currentPassword").value, "Wrong current password retained");
+        database.wrongPassword = false;
+        fillPasswords(context);
+        submitPassword(context);
+        await waitFor(() => context.query("#passwordStatus").classList.contains("success"));
+    });
+    await check("Pending password change prevents duplicate requests", async () => {
+        const database = state();
+        database.delayPassword = true;
+        const context = await setup(database);
+        fillPasswords(context);
+        submitPassword(context);
+        await waitFor(() => database.releasePassword);
+        assert(context.query("#changePasswordFields").disabled, "Fields editable during password request");
+        context.query("#changePasswordForm").dispatchEvent(new context.win.Event("submit", { cancelable: true }));
+        assert(database.calls.filter(call => call.url === "/api/change-password").length === 1, "Duplicate password requests sent");
+        database.releasePassword();
+        await waitFor(() => context.query("#passwordStatus").classList.contains("success"));
+    });
+    for (const failure of ["failPassword", "failPasswordNetwork"]) {
+        await check(`Password ${failure} clears sensitive fields and allows retry`, async () => {
+            const database = state();
+            database[failure] = true;
+            const context = await setup(database);
+            fillPasswords(context);
+            submitPassword(context);
+            await waitFor(() => context.query("#passwordStatus").classList.contains("error"));
+            assert(!context.query("#currentPassword").value && !context.query("#newPassword").value, "Sensitive fields retained after failure");
+            assert(!context.query("#changePasswordFields").disabled, "Password retry disabled");
+            database[failure] = false;
+            fillPasswords(context);
+            submitPassword(context);
+            await waitFor(() => context.query("#passwordStatus").classList.contains("success"));
+        });
+    }
+    await check("Leaving Profile clears passwords and resets visibility", async () => {
+        const context = await setup(state());
+        fillPasswords(context);
+        context.query('[data-change-password-toggle="currentPassword"]').click();
+        context.win.dispatchEvent(new context.win.Event("pagehide"));
+        for (const input of context.frame.contentDocument.querySelectorAll("#changePasswordForm input")) {
+            assert(!input.value && input.type === "password", "Navigation retained visible passwords");
+        }
+    });
+    await check("Expired password session clears fields and navigates to login", async () => {
+        const database = state();
+        database.expiredPassword = true;
+        const context = await setup(database);
+        fillPasswords(context);
+        const inputs = [...context.frame.contentDocument.querySelectorAll("#changePasswordForm input")];
+        submitPassword(context);
+        await waitFor(() => context.frame.contentWindow.location.pathname === "/login.html");
+        assert(inputs.every(input => !input.value && input.type === "password"), "Expired session retained passwords");
+    });
+    for (const width of [360, 768, 1440]) {
+        await check(`Change Password fits the viewport at ${width}px`, async () => {
+            const context = await setup(state(), "profile", width);
+            for (const element of context.frame.contentDocument.querySelectorAll("#changePasswordForm input, #changePasswordForm button")) {
+                const rect = element.getBoundingClientRect();
+                assert(rect.left >= 0 && rect.right <= width + 1, "Password control outside viewport");
+            }
+        });
+    }
     await check("No JavaScript runtime failures", async () => { assert(runtimeErrors.length === 0, runtimeErrors.join("; ")); });
     document.querySelector("#results").textContent = results.join("\n") + "\nDONE";
 })().catch(error => { document.querySelector("#results").textContent = "FAIL " + error.stack; });

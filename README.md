@@ -221,6 +221,59 @@ For a local manual check after starting Flask:
 6. Sign in as another patient in a separate browser profile. That account must
    have its own photo and cannot view or alter the first patient's photo URL.
 
+## Change Password
+
+My Profile includes a Change Password card with Current Password, New Password,
+Confirm New Password, and Update Password. Each field has an accessible Show/Hide
+control and starts masked. A new password must contain at least eight characters,
+match its confirmation, and differ from the verified current password. Passwords
+are not trimmed, so intentional spaces remain significant. Fields are limited to
+1024 characters, and the API limits the request body to 16 KB.
+
+`POST /api/change-password` accepts JSON containing exactly `current_password`,
+`new_password`, and `confirm_password`, with the existing profile CSRF token in
+`X-CSRF-Token`. The route requires a login session and rejects cross-site requests,
+extra identity fields, malformed input, and query parameters. A wrong current
+password returns 400 without logging the patient out; an expired session returns
+401 and the browser redirects to login. The frontend disables the form while a
+request is pending and blocks duplicate submissions.
+
+The backend selects only the session patient's hash with `SELECT ... FOR UPDATE`,
+verifies it with Werkzeug `check_password_hash`, and saves a fresh Werkzeug
+`generate_password_hash` result using a parameterized UPDATE scoped to that ID.
+Concurrent changes cannot verify an obsolete hash. Failures roll back, and only
+`patients.password_hash` is updated. The existing schema is unchanged; no migration
+is required. Profile details, photos, health records, and other accounts remain
+untouched. The current login remains active after a successful change.
+
+Passwords are never included in API responses, logs, cookies, or browser storage.
+The form clears and remasks its fields after every completed request and when
+leaving the page or restoring it from browser Back. Plain text is visible in an
+input only when the patient explicitly chooses Show.
+
+Changed files for this feature are `frontend/pages/profile.html`,
+`frontend/assets/js/profile.js`, `frontend/assets/css/profile.css`,
+`backend/smart_patient/routes/auth.py` and its existing root-package copy,
+`tests/test_password.py`, `tests/test_password_mysql.py`,
+`tests/browser/profile.html`, and this README. No reset, OTP, or email flow is added.
+
+To test manually, start Flask with the existing command:
+
+```powershell
+.\backend\venv\Scripts\python.exe .\backend\app.py
+```
+
+1. Sign in at <http://127.0.0.1:5000/>, open My Profile, and find Change Password.
+2. Enter a wrong current password with matching valid new passwords. Confirm the
+   error appears and the patient remains signed in.
+3. Try mismatched confirmation, a password shorter than eight characters, and
+   reusing the current password. Each should show an error without a save.
+4. Use the correct current password and a matching different password. Confirm
+   success, empty masked fields, and unchanged profile details and photo.
+5. Log out. Confirm the old password fails login and the new password works.
+6. To check expiry, sign out in another tab while Profile remains open, then
+   submit the form. It should redirect to login and clear its password fields.
+
 ## Checks
 
 ```powershell
@@ -229,7 +282,7 @@ For a local manual check after starting Flask:
 
 The default checks use Flask's test client, mocked database connections, and an
 isolated SQLite table. They never read or write patient records in MySQL. The live
-MySQL photo test is skipped unless explicitly enabled below.
+MySQL tests are skipped unless explicitly enabled below.
 
 To check popup interactions in Google Chrome, including registration,
 validation, redirects, and mobile layout:
@@ -249,6 +302,30 @@ and mobile layouts:
 .\backend\venv\Scripts\python.exe tests/run_notifications_browser.py --suite profile
 .\backend\venv\Scripts\python.exe tests/run_notifications_browser.py --suite sidebar
 ```
+
+The profile browser suite also checks password masking, Show/Hide, validation,
+success/failure messages, duplicate prevention, sensitive-field clearing, expired
+sessions, and responsive password controls. `tests/test_password.py` covers server
+validation, current-password verification, safe responses, CSRF, session and SQL
+ownership checks, hashing, old-password rejection, and rollback.
+
+To run the live MySQL password/login test explicitly:
+
+```powershell
+$env:SMARTHEALTH_TEST_MYSQL = "1"
+try {
+    .\backend\venv\Scripts\python.exe -m unittest discover -s tests -p test_password_mysql.py -v
+} finally {
+    Remove-Item Env:SMARTHEALTH_TEST_MYSQL
+}
+```
+
+This opt-in test creates two disposable patients and one health reading. It
+verifies incorrect passwords, mismatches, unauthorized requests, a successful
+change, old-password login rejection, new-password login success, and unchanged
+profile information, photos, health records, and the second patient's hash. It
+cleans up only its own test rows and compares existing patient and health data
+before and after. Existing patients' passwords are never changed by the test.
 
 `tests/test_profile.py` covers session enforcement, CSRF and origin checks,
 read-only fields, validation, SQL ownership isolation, rollback, safe responses,
