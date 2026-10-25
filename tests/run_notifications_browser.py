@@ -58,7 +58,9 @@ def main():
                 content_type = "text/javascript; charset=utf-8"
             elif self.path in {"/assets/css/style.css", "/assets/css/notifications.css", "/assets/css/page-layout.css", "/assets/css/profile.css"}:
                 css = (ROOT / "frontend" / self.path.lstrip("/")).read_text(encoding="utf-8")
-                data = re.sub(r"@import[^;]+;", "", css).encode("utf-8")
+                # Font URLs contain semicolons; consume the whole url(), not the
+                # first weight separator, so the following :root rule stays valid.
+                data = re.sub(r"@import\s+url\([^)]*\)\s*;", "", css).encode("utf-8")
                 content_type = "text/css; charset=utf-8"
             else:
                 self.send_error(404)

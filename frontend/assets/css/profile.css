@@ -20,8 +20,6 @@
     box-shadow: 0 12px 36px rgba(74, 43, 112, 0.06), 0 2px 6px rgba(74, 43, 112, 0.03);
 }
 
-.profile-page .sidebar-nav a:hover,
-.profile-page .sidebar-nav a.active,
 .profile-page .patient-account-link:hover,
 .profile-page .patient-account-badge {
     background: #f0e8fa;

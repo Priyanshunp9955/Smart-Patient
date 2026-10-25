@@ -45,6 +45,33 @@
             const context = await setup(path);
             assert(current(context) === label, "Wrong page selected");
             assert(context.query(".sidebar-nav a.active").getAttribute("aria-current") === "page", "Page selection not announced");
+            assert(context.frame.contentDocument.querySelectorAll(".sidebar-nav a .sidebar-icon").length === 7, "Missing navigation icons");
+            assert(context.query(".sidebar-heading").textContent.includes("Patient Area"), "Missing portal card");
+            assert(context.query('.sidebar-bottom a[href="index.html"]').textContent.trim() === "Back to Home", "Missing home link");
+            assert(context.frame.contentWindow.getComputedStyle(context.query(".sidebar-toggle")).display === "none", "Desktop toggle should be hidden");
+            assert(!context.query(".sidebar-content").hidden, "Desktop navigation should be expanded");
+        });
+        await check(label + " has an accessible collapsible mobile menu", async () => {
+            const context = await setup(path, 390);
+            const toggle = context.query(".sidebar-toggle");
+            const content = context.query(".sidebar-content");
+            assert(toggle.tagName === "BUTTON" && toggle.type === "button", "Toggle must be a native keyboard-accessible button");
+            assert(toggle.getAttribute("aria-controls") === content.id, "Toggle does not identify its content");
+            assert(content.hidden && toggle.getAttribute("aria-expanded") === "false", "Mobile menu should start closed");
+            toggle.focus();
+            toggle.click();
+            assert(!content.hidden && toggle.getAttribute("aria-expanded") === "true", "Menu did not open");
+            assert(current(context) === label, "Opening menu changed active page");
+            const active = context.query(".sidebar-nav a.active");
+            active.focus();
+            assert(context.frame.contentDocument.activeElement === active, "Links cannot receive keyboard focus");
+            active.dispatchEvent(new context.frame.contentWindow.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+            assert(content.hidden && toggle.getAttribute("aria-expanded") === "false", "Escape did not close menu");
+            assert(context.frame.contentDocument.activeElement === toggle, "Escape did not restore toggle focus");
+            toggle.click();
+            toggle.click();
+            assert(content.hidden, "Toggle did not close menu");
+            assert(context.frame.contentDocument.documentElement.scrollWidth <= 390, "Mobile page has horizontal overflow");
         });
     }
     for (const [hash, label] of [["#recent-readings", "Health Records"], ["#health-trends", "Health Trends"], ["#health-alerts", "Health Alerts"]]) {
@@ -88,13 +115,65 @@
         await pause(100);
         assert(current(context) === "Dashboard", "Scroll to top selected " + current(context) + ", y=" + context.frame.contentWindow.scrollY);
     });
-    await check("The active mobile tab is visible without moving page content", async () => {
+    await check("The active mobile link is visible when the menu opens", async () => {
         const context = await setup("/consultation.html", 390);
         assert(current(context) === "Doctor Consultation", "Wrong mobile selection");
+        context.query(".sidebar-toggle").click();
         const menu = context.query(".sidebar-nav").getBoundingClientRect();
         const active = context.query(".sidebar-nav a.active").getBoundingClientRect();
-        assert(active.left >= menu.left - 1 && active.right <= menu.right + 1, "Active tab is outside horizontal menu");
-        assert(context.frame.contentWindow.scrollY === 0, "Revealing active tab scrolled the page");
+        assert(active.left >= menu.left - 1 && active.right <= menu.right + 1, "Active link is outside menu");
+        assert(active.top >= 0 && active.bottom <= 768, "Active link is outside viewport");
+        assert(context.frame.contentWindow.scrollY === 0, "Opening menu scrolled the page");
+    });
+    await check("A mobile section link closes the menu and keeps its active marker", async () => {
+        const context = await setup("/dashboard.html", 390);
+        context.query(".sidebar-toggle").click();
+        context.query('.sidebar-nav a[href="#health-alerts"]').click();
+        assert(context.query(".sidebar-content").hidden, "Navigation did not collapse menu");
+        await pause(1500);
+        assert(context.frame.contentWindow.location.hash === "#health-alerts", "Section navigation failed");
+        assert(current(context) === "Health Alerts", "Wrong mobile section selected");
+    });
+    await check("Clicking outside the mobile menu closes it", async () => {
+        const context = await setup("/dashboard.html", 390);
+        context.query(".sidebar-toggle").click();
+        context.query(".dashboard-main h1").click();
+        assert(context.query(".sidebar-content").hidden, "Outside click did not close menu");
+    });
+    await check("The menu resets correctly across tablet and desktop breakpoints", async () => {
+        const context = await setup("/profile.html", 820);
+        const toggle = context.query(".sidebar-toggle");
+        const content = context.query(".sidebar-content");
+        assert(content.hidden, "Tablet should use collapsed menu");
+        toggle.click();
+        context.query(".sidebar-nav a.active").focus();
+        context.frame.style.width = "1200px";
+        await waitFor(() => context.frame.contentWindow.getComputedStyle(toggle).display === "none" && !content.hidden);
+        assert(context.frame.contentWindow.innerWidth === 1200, "Desktop frame has not resized");
+        context.frame.style.width = "390px";
+        await waitFor(() => context.frame.contentWindow.getComputedStyle(toggle).display !== "none" && content.hidden);
+        assert(context.frame.contentDocument.activeElement === toggle, "Resize left focus inside hidden menu");
+        toggle.click();
+        assert(!content.hidden, "Toggle failed after resize");
+    });
+    await check("Every navigation destination resolves", async () => {
+        const context = await setup();
+        for (const link of context.frame.contentDocument.querySelectorAll(".sidebar-nav a, .sidebar-bottom a, .dashboard-logo")) {
+            const url = new URL(link.href);
+            const response = await fetch(url.pathname);
+            assert(response.ok, "Broken destination " + link.href);
+            if (url.hash) {
+                const page = new DOMParser().parseFromString(await response.text(), "text/html");
+                assert(page.getElementById(url.hash.slice(1)), "Missing destination section " + url.hash);
+            }
+        }
+    });
+    await check("Profile keeps its lavender theme while sidebar uses shared teal", async () => {
+        const context = await setup("/profile.html");
+        const styles = node => context.frame.contentWindow.getComputedStyle(node);
+        assert(styles(context.query(".dashboard-main")).getPropertyValue("--primary").trim() === "#7043ad", "Profile theme changed");
+        assert(styles(context.query(".sidebar-nav a.active")).color === "rgb(7, 103, 116)", "Profile sidebar is not teal");
+        assert(styles(context.query(".sidebar-nav a.active")).backgroundColor === "rgb(232, 244, 250)", "Profile active background is not blue");
     });
     await check("Unknown dashboard fragments fall back to the page marker", async () => {
         const context = await setup("/dashboard.html#unknown-section");
