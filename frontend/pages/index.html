@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="stylesheet" href="/assets/css/notifications.css">
 </head>
-<body>
+<body class="home-page">
 
     <!-- Website Header -->
     <header class="site-header">
@@ -26,6 +26,7 @@
                 <a href="#about">About</a>
                 <a href="#features">Features</a>
                 <a href="#consultation">Consultation</a>
+                <a href="#Team">Team</a>
             </nav>
 
             <a href="login.html" class="nav-button">
@@ -171,6 +172,63 @@
 
             </div>
         </section>
+
+        <!-- Meet Our Team -->
+        <section class="content-section team-section" id="Team" aria-labelledby="team-heading">
+            <div class="container">
+                <div class="team-intro">
+                    <span class="section-tag">SMARTHEALTH &ndash; TDP PROJECT-2026</span>
+                    <h2 id="team-heading">Meet Our Team</h2>
+                    <p>The faculty guidance and student collaboration behind SmartHealth.</p>
+                    <p class="team-university">Vivekananda Global University, Jaipur</p>
+                </div>
+
+                <!-- Add team portraits to assets/images using the filenames below.
+                     The initials remain visible when a portrait is unavailable. -->
+                <article class="team-card team-supervisor" aria-labelledby="supervisor-name">
+                    <object class="team-avatar" data="/assets/images/anjali-kumari.jpg"
+                            type="image/jpeg" role="img" aria-label="Ms. Anjali Kumari" width="112" height="112">
+                        <span class="team-avatar-fallback" aria-hidden="true">AK</span>
+                    </object>
+                    <div>
+                        <p class="team-eyebrow">Faculty Supervisor</p>
+                        <h3 id="supervisor-name">Ms. Anjali Kumari</h3>
+                        <p class="team-role">Project Supervisor</p>
+                        <p class="team-qualification">Qualification: Bachelor of Physiotherapy (BPT)</p>
+                    </div>
+                </article>
+
+                <h3 class="team-group-title" id="student-team-heading">Student Development Team</h3>
+                <div class="team-grid" role="group" aria-labelledby="student-team-heading">
+                    <article class="team-card" aria-labelledby="priyanshu-name">
+                        <object class="team-avatar" data="/assets/images/priyanshu-kumar.jpg"
+                                type="image/jpeg" role="img" aria-label="Priyanshu Kumar" width="96" height="96">
+                            <span class="team-avatar-fallback" aria-hidden="true">PK</span>
+                        </object>
+                        <h4 id="priyanshu-name">Priyanshu Kumar</h4>
+                        <p class="team-role">Student Developer</p>
+                    </article>
+
+                    <article class="team-card" aria-labelledby="vikramaditya-name">
+                        <object class="team-avatar" data="/assets/images/vikramaditya-kumar.jpg"
+                                type="image/jpeg" role="img" aria-label="Vikramaditya Kumar" width="96" height="96">
+                            <span class="team-avatar-fallback" aria-hidden="true">VK</span>
+                        </object>
+                        <h4 id="vikramaditya-name">Vikramaditya Kumar</h4>
+                        <p class="team-role">Student Developer</p>
+                    </article>
+
+                    <article class="team-card" aria-labelledby="pranjal-name">
+                        <object class="team-avatar" data="/assets/images/pranjal-kumar.jpg"
+                                type="image/jpeg" role="img" aria-label="Pranjal Kumar" width="96" height="96">
+                            <span class="team-avatar-fallback" aria-hidden="true">PK</span>
+                        </object>
+                        <h4 id="pranjal-name">Pranjal Kumar</h4>
+                        <p class="team-role">Student Developer</p>
+                    </article>
+                </div>
+            </div>
+        </section>
     </main>
 
     <!-- Footer -->
@@ -178,6 +236,7 @@
         <div class="container footer-content">
             <p>SmartHealth — Patient Health Monitoring System</p>
             <p>TDP Project-2026</p>
+            <p class="footer-credit">Developed by SmartHealth TDP Team | Supervised by Ms. Anjali Kumari</p>
         </div>
     </footer>
 
