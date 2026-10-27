@@ -104,6 +104,74 @@ def add_health_reading():
             connection.close()
 
 
+@blueprint.route("/api/readings/<int:reading_id>", methods=["PUT"])
+def update_health_reading(reading_id):
+    patient_id = session.get("patient_id")
+    if patient_id is None:
+        return jsonify(status="error", message="Please log in first."), 401
+
+    origin = request.headers.get("Origin")
+    if (request.headers.get("X-SmartHealth-Action") != "edit-reading" or
+            origin not in (None, request.host_url.rstrip("/"))):
+        return jsonify(status="error", message="Update request was not allowed."), 403
+    if reading_id < 1:
+        return jsonify(status="error", message="Health reading not found."), 404
+
+    data = request.get_json(silent=True) if request.is_json else None
+    fields = {"heart_rate", "spo2", "systolic", "diastolic", "temperature", "measured_at"}
+    try:
+        if not isinstance(data, dict) or set(data) != fields or request.args:
+            raise ValueError("Please provide only the health measurements and date/time.")
+        if any(isinstance(data[field], bool) for field in fields):
+            raise ValueError("Please enter valid health measurements and date/time.")
+        reading = validate_health_reading(data)
+        for field in ("heart_rate", "systolic", "diastolic"):
+            if numeric_measurement(data[field]) != reading[field]:
+                raise ValueError("Heart rate and blood pressure must be whole numbers.")
+        if reading["systolic"] <= reading["diastolic"]:
+            raise ValueError("Systolic blood pressure must be greater than diastolic.")
+    except ValueError as error:
+        return jsonify(status="error", message=str(error)), 400
+
+    connection = None
+    cursor = None
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        # Lock the owned record so an unchanged UPDATE still succeeds, while
+        # missing and other-patient records receive the same response.
+        cursor.execute(
+            "SELECT id FROM health_readings WHERE id = %s AND patient_id = %s FOR UPDATE",
+            (reading_id, patient_id)
+        )
+        if cursor.fetchone() is None:
+            connection.rollback()
+            return jsonify(status="error", message="Health reading not found."), 404
+        cursor.execute(
+            """
+            UPDATE health_readings
+            SET heart_rate = %s, spo2 = %s, systolic = %s,
+                diastolic = %s, temperature = %s, measured_at = %s
+            WHERE id = %s AND patient_id = %s
+            """,
+            (reading["heart_rate"], reading["spo2"], reading["systolic"],
+             reading["diastolic"], reading["temperature"], reading["measured_at"],
+             reading_id, patient_id)
+        )
+        connection.commit()
+        return jsonify(status="success", message="Health reading updated successfully.", reading_id=reading_id)
+    except Error:
+        if connection is not None and connection.is_connected():
+            connection.rollback()
+        current_app.logger.exception("Failed to update health reading")
+        return jsonify(status="error", message="Unable to update health reading. Please try again."), 500
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if connection is not None and connection.is_connected():
+            connection.close()
+
+
 @blueprint.route("/api/readings/<int:reading_id>", methods=["DELETE"])
 def delete_health_reading(reading_id):
     patient_id = session.get("patient_id")

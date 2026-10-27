@@ -9,9 +9,10 @@
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="stylesheet" href="/assets/css/page-layout.css">
     <link rel="stylesheet" href="/assets/css/notifications.css">
+    <link rel="stylesheet" href="/assets/css/health-alerts.css">
 </head>
 
-<body class="dashboard-page">
+<body class="dashboard-page health-alerts-page">
 
     <div class="dashboard-layout">
 
@@ -82,58 +83,77 @@
             </header>
             <p id="dashboardReadingsStatus" class="dashboard-note" role="status"></p>
 
-<section class="dashboard-section" id="health-alerts">
+<section class="dashboard-section" id="health-alerts" aria-labelledby="analysis-heading">
 
     <div class="dashboard-section-heading">
         <div>
-            <h2>Health Alerts</h2>
+            <h2 id="analysis-heading">Early Alert Analysis</h2>
             <p>
-                Rule-based analysis of the latest saved reading
+                A clear view of the demonstration rules matched by your latest saved reading.
             </p>
         </div>
 
     </div>
 
-    <div class="dashboard-panel">
+    <div class="dashboard-panel alert-analysis-panel">
 
         <div class="alert-section-header">
+            <span class="analysis-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3 4 6v5c0 5 8 10 8 10s8-5 8-10V6l-8-3Z"/>
+                    <path d="M7 12h3l1.5-3 2 6 1.5-3h2"/>
+                </svg>
+            </span>
             <div>
-                <h3>Early Alert Analysis</h3>
-                <p id="alertSummary">
+                <h3>Your latest saved reading</h3>
+                <p id="alertSummary" role="status">
                     Checking saved health readings...
                 </p>
+                <p id="alertReadingContext" hidden></p>
             </div>
+            <span id="alertMatchCount" class="alert-match-count" hidden></span>
         </div>
 
         <div id="alertsContainer"
              class="alerts-container"
              aria-live="polite">
+            <p class="alert-state-message">Loading your saved readings...</p>
         </div>
 
-        <p class="alert-disclaimer">
-            Demonstration only. These alerts do not provide
-            a medical diagnosis or confirm that a reading
-            is safe. For medical concerns, seek advice from
-            a qualified healthcare professional.
-        </p>
+        <aside class="alert-disclaimer" aria-labelledby="alert-disclaimer-heading">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                <circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v2"/>
+            </svg>
+            <div>
+                <h3 id="alert-disclaimer-heading">Academic demonstration only</h3>
+                <p>These alerts are generated using predefined academic demonstration thresholds. They do not provide a medical diagnosis or confirm whether a patient is medically safe. For medical concerns, seek advice from a qualified healthcare professional.</p>
+                <p class="alert-urgent-guidance">For severe symptoms, such as severe difficulty breathing or chest tightness, seek urgent medical attention immediately. Do not wait for an alert or a consultation.</p>
+            </div>
+        </aside>
 
     </div>
 
 </section>
 
-<section class="dashboard-section" id="consultation">
-                <div class="consultation-panel">
-                    <div>
-                        <h2>Need to Consult a Doctor?</h2>
+<section class="dashboard-section" id="consultation" aria-labelledby="consultation-heading">
+                <div class="consultation-panel alert-consultation-panel">
+                    <span class="consultation-icon" aria-hidden="true">
+                        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M7 5v7a6 6 0 0 0 12 0V5M7 5h3m9 0h-3M13 18v5a5 5 0 0 0 10 0v-3"/>
+                            <circle cx="23" cy="17" r="3"/>
+                        </svg>
+                    </span>
+                    <div class="alert-consultation-copy">
+                        <h2 id="consultation-heading">Need to Consult a Doctor?</h2>
                         <p>
-                            You can choose to seek professional
-                            medical advice whenever you feel
-                            a consultation is necessary.
+                            You can choose to speak with a qualified healthcare professional
+                            if you feel unwell or have concerns about your readings.
                         </p>
-                        <a href="consultation.html" class="primary-button">
-                                Explore Doctor Consultation
-                        </a>
+                        <p class="consultation-choice">Consultation is optional and always your choice.</p>
                     </div>
+                    <a href="consultation.html" class="primary-button">
+                        Explore Doctor Consultation <span aria-hidden="true">&rarr;</span>
+                    </a>
                 </div>
             </section>
 

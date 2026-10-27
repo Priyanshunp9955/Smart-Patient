@@ -69,6 +69,8 @@ async function displaySavedReadings() {
             createCell(row, `${reading.temperature} °C`);
 
             const actions = document.createElement("td");
+            actions.className = "reading-actions";
+            actions.appendChild(window.SmartHealth.readings.createEditButton(reading));
             actions.appendChild(window.SmartHealth.readings.createDeleteButton(reading));
             row.appendChild(actions);
 

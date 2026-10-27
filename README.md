@@ -99,6 +99,19 @@ Complete readings with no matches show information; unavailable measurements
 show an incomplete-analysis message, and failed API requests clear stale alerts
 and show an error. Alerts are for academic demonstration only.
 
+Saved-reading tables on Add Reading, Health Records, and Dashboard have an Edit
+option in the Actions column. Edit opens a prefilled form for all five measurements
+and their measurement date/time. Save Changes updates the existing record through
+`PUT /api/readings/<reading_id>` with JSON measurement fields and
+`X-SmartHealth-Action: edit-reading`; Cancel or Escape closes the form without
+writing. Pending saves prevent duplicate submissions. Failed saves keep entered
+values for retry. The API validates input, rejects cross-origin requests and client
+identity fields, and scopes both record lookup and update to the signed-in patient.
+Unchanged values succeed; missing and other-patient records return the same 404.
+Successful edits refresh the current page and other open reading pages, including
+history ordering, dashboard cards, trends, and demonstration alerts. No schema
+change or migration is needed. Edit tests use isolated fixtures only.
+
 Saved-reading tables have an Actions column. Delete opens a browser
 confirmation identifying the reading ID and measurement date; cancelling sends
 no request. Confirmed deletion calls `DELETE /api/readings/<reading_id>` with
@@ -167,6 +180,49 @@ $plotlyTestBundle = Join-Path $env:TEMP 'smarthealth-plotly-3.1.0.min.js'
 Invoke-WebRequest 'https://cdn.plot.ly/plotly-3.1.0.min.js' -OutFile $plotlyTestBundle
 .\backend\venv\Scripts\python.exe tests/run_notifications_browser.py --suite health-readings --plotly-script $plotlyTestBundle
 ```
+
+## Health Alerts presentation
+
+`health-alerts.html` keeps the signed-in readings API and the existing five
+academic rules. Alerts still analyze the highest-ID saved record, including
+backdated measurements. Each matched rule shows its parameter icon, recorded
+value and unit, High/Low badge, demonstration threshold, explanation, and a
+cautious Suggested Action. Heart rate and blood pressure use muted red, oxygen
+uses blue, and temperature uses orange. Cards use three columns on large screens,
+two on smaller desktops/tablets, and one on mobile. Page-specific styling lives
+in `frontend/assets/css/health-alerts.css`; other portal pages retain their styles.
+
+The analysis shows the measured date/time and match count. No matches, no saved
+readings, incomplete measurements, and failed requests have separate messages;
+counts and dates clear on empty/error responses. No-match messages do not imply
+medical safety. The visible academic disclaimer includes severe-symptom guidance,
+and the soft teal consultation panel retains the optional, patient-initiated
+`consultation.html` link. General emergency wording was checked against the
+[NHS advice on severe breathing difficulty and chest tightness](https://www.nhs.uk/symptoms/shortness-of-breath/).
+It does not turn the project's demonstration thresholds into clinical rules.
+
+This UI update changes `frontend/pages/health-alerts.html`,
+`frontend/assets/js/alerts.js`, the new page-specific stylesheet,
+`tests/browser/health-readings.html`, and the browser runner's stylesheet allowlist.
+It requires no database migration or new dependency. Tests use isolated API
+fixtures, never live patient records:
+
+```powershell
+.\backend\venv\Scripts\python.exe -m unittest discover -s tests -v
+.\backend\venv\Scripts\python.exe tests/run_notifications_browser.py --suite health-readings
+```
+
+Browser coverage checks 39 C temperature, 110 BPM heart rate, 93% oxygen,
+both pressure rules, equality boundaries, multiple matches and counts, numeric
+strings, missing data, no matches, empty history, failed requests, latest-save
+selection, current-patient changes, optional consultation, and responsive grids
+at 1440, 1280, 1100, 768, 390, and 320 pixels. Desktop/mobile visual previews use
+only temporary test fixtures. No sample values are added to the production page.
+
+Verification for this update: 75 backend tests passed (two live-MySQL tests
+skipped), and all 48 health-reading browser checks passed. Sidebar navigation
+checks passed; one existing sidebar assertion still expects a lavender Profile
+theme although the unchanged Profile page inherits the shared teal theme.
 
 ## Patient profile
 

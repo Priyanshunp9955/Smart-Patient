@@ -20,10 +20,23 @@
     }
     const row = (changes = {}) => ({ id: 1, heart_rate: 72, spo2: 98, systolic: 120, diastolic: 80, temperature: 36.5, measured_at: "2020-01-02T10:30", ...changes });
     function database(rows = []) {
-        const state = { rows, calls: [], fail: false, failSave: false, failDelete: false };
+        const state = { rows, calls: [], fail: false, failSave: false, failDelete: false, failUpdate: false };
         state.fetch = async (url, options = {}) => {
             assert(url === "/api/readings" || /^\/api\/readings\/\d+$/.test(url), "Unexpected endpoint: " + url);
             state.calls.push({ url, ...options });
+            if (options.method === "PUT") {
+                assert(options.headers["X-SmartHealth-Action"] === "edit-reading", "PUT request protection missing");
+                if (state.failUpdate) {
+                    return { ok: false, status: 500, json: async () => ({ status: "error", message: "Unable to update health reading. Please try again." }) };
+                }
+                const id = Number(url.split("/").at(-1));
+                const index = state.rows.findIndex(item => item.id === id);
+                if (index === -1) {
+                    return { ok: false, status: 404, json: async () => ({ status: "error", message: "Health reading not found." }) };
+                }
+                state.rows[index] = { ...state.rows[index], ...JSON.parse(options.body), id };
+                return { ok: true, status: 200, json: async () => ({ status: "success", reading_id: id }) };
+            }
             if (options.method === "DELETE") {
                 assert(JSON.parse(options.body).confirmed === true, "DELETE requires explicit confirmation");
                 assert(options.headers["X-SmartHealth-Action"] === "delete-reading", "DELETE request protection missing");
@@ -58,6 +71,8 @@
         frame.srcdoc = fixtures.pages[page].replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "");
         document.body.appendChild(frame);
         await loaded;
+        // Native dialog close/focus events need a rendered iframe in Chrome.
+        frame.scrollIntoView({ behavior: "instant", block: "start" });
         const win = frame.contentWindow;
         win.sessionStorage.clear();
         win.localStorage.clear();
@@ -78,7 +93,7 @@
                 react(element, data) { charts.push(data); }
             };
         }
-        for (const script of ["notifications.js", "health-readings.js", ...(page === "add-reading" ? ["add-reading.js"] : [...(page === "health-alerts" ? ["alerts.js"] : []), "dashboard.js"])]) {
+        for (const script of ["notifications.js", "health-readings.js", ...(page === "add-reading" ? ["add-reading.js"] : [...(page === "health-alerts" ? ["alerts.js"] : []), "dashboard.js"]), ...(page === "health-alerts" ? ["sidebar.js"] : [])]) {
             win.eval(fixtures.scripts[script]);
         }
         return { frame, win, charts, confirmations, query: selector => frame.contentDocument.querySelector(selector) };
@@ -204,7 +219,7 @@
         assert(context.frame.contentDocument.querySelectorAll(".health-alert-card").length === 5, "All matching rules should display");
         context.win.displayHealthAlerts(row());
         assert(!context.query(".health-alert-card") && context.query(".no-alert-message"), "Normal reading did not clear alerts and show information");
-        assert(context.query(".alert-disclaimer").textContent.includes("Demonstration only"), "Academic disclaimer missing");
+        assert(context.query(".alert-disclaimer").textContent.includes("predefined academic demonstration thresholds"), "Academic disclaimer missing");
     });
     await check("Numeric strings are evaluated while missing and invalid values stay unavailable", async () => {
         const state = database([row({ heart_rate: "120", spo2: "94", systolic: "150", diastolic: "95", temperature: "39" })]);
@@ -508,6 +523,257 @@
             assert(chart.getBoundingClientRect().width <= 390, "Real chart overflows mobile viewport");
         });
     }
+    await check("Edit prefills every field and Cancel preserves saved records on all reading tables", async () => {
+        for (const page of ["dashboard", "health-records", "add-reading"]) {
+            const state = database([row()]);
+            const context = await setup(page, state);
+            await waitFor(() => context.query('[data-edit-reading="1"]'));
+            context.query('[data-edit-reading="1"]').click();
+            assert(context.query("#editReadingDialog").open, "Editor did not open");
+            for (const [name, value] of Object.entries(state.rows[0])) {
+                if (name !== "id") assert(context.query(`[name="${name}"]`).value === String(value), name + " was not prefilled");
+            }
+            context.query('[name="heart_rate"]').value = "99";
+            context.query("[data-edit-cancel]").click();
+            await waitFor(() => !context.query("#editReadingDialog")?.open);
+            assert(state.rows[0].heart_rate === 72 && !state.calls.some(call => call.method === "PUT"), "Cancel changed the record");
+            await waitFor(() => context.frame.contentDocument.activeElement.dataset.editReading === "1");
+        }
+    });
+    await check("Editing preserves the row ID and refreshes records, dashboard, trends, and alerts", async () => {
+        const state = database([row()]);
+        const dashboard = await setup("dashboard", state);
+        const trends = await setup("health-trends", state);
+        const alerts = await setup("health-alerts", state);
+        const context = await setup("health-records", state);
+        await waitFor(() => context.query("[data-edit-reading]") && alerts.query(".no-alert-message") && dashboard.charts.length && trends.charts.length);
+        context.query("[data-edit-reading]").click();
+        const changes = { heart_rate: "115", spo2: "94.5", systolic: "145", diastolic: "95", temperature: "39", measured_at: "2020-01-03T11:00" };
+        for (const [name, value] of Object.entries(changes)) context.query(`[name="${name}"]`).value = value;
+        context.query("#editReadingForm").requestSubmit();
+        await waitFor(() => !context.query("#editReadingDialog") && context.query(".notification-success"));
+        await waitFor(() => dashboard.query("#latestHeartRate").textContent === "115" && alerts.frame.contentDocument.querySelectorAll(".health-alert-card").length === 5);
+        await waitFor(() => trends.charts.at(-1)[0].y.at(-1) === 115 && context.query("#readingsTableBody").textContent.includes("115 BPM"));
+        assert(state.rows.length === 1 && state.rows[0].id === 1, "Edit inserted a new record or changed its ID");
+        const call = state.calls.find(call => call.method === "PUT");
+        assert(call.url === "/api/readings/1" && call.credentials === "same-origin", "Edit targeted the wrong API record");
+        assert(JSON.parse(call.body).measured_at === changes.measured_at, "Measurement time was not saved");
+        assert(dashboard.charts.at(-1)[0].y.at(-1) === 115, "Dashboard trend retained old values");
+    });
+    await check("Editing measurement date reorders history and works without BroadcastChannel", async () => {
+        const state = database([row(), row({ id: 2, heart_rate: 90, measured_at: "2020-01-03T10:30" })]);
+        const context = await setup("health-records", state, { noChannel: true });
+        await waitFor(() => context.query('[data-edit-reading="1"]'));
+        context.query('[data-edit-reading="1"]').click();
+        context.query('[name="measured_at"]').value = "2020-01-04T10:30";
+        context.query("#editReadingForm").requestSubmit();
+        await waitFor(() => context.query("#readingsTableBody tr").textContent.includes("2020-01-04"));
+        assert(state.rows.length === 2, "Reordering duplicated the reading");
+    });
+    await check("Editor validates ranges, dates, and blood pressure before sending updates", async () => {
+        const state = database([row()]);
+        const context = await setup("health-records", state);
+        await waitFor(() => context.query("[data-edit-reading]"));
+        context.query("[data-edit-reading]").click();
+        const heart = context.query('[name="heart_rate"]');
+        heart.value = "999";
+        context.query("#editReadingForm").requestSubmit();
+        assert(!heart.checkValidity(), "Invalid range was accepted");
+        heart.value = "72";
+        context.query('[name="measured_at"]').value = "2999-01-01T10:00";
+        context.query("#editReadingForm").requestSubmit();
+        assert(!context.query('[name="measured_at"]').checkValidity(), "Future date was accepted");
+        context.query('[name="measured_at"]').value = "2020-01-02T10:30";
+        context.query('[name="systolic"]').value = "70";
+        context.query("#editReadingForm").requestSubmit();
+        assert(context.query("[data-edit-error]").textContent.includes("greater than"), "Blood pressure validation missing");
+        assert(!state.calls.some(call => call.method === "PUT"), "Invalid measurements sent an update");
+    });
+    await check("Failed updates preserve input and records, then allow retry", async () => {
+        const state = database([row()]);
+        state.failUpdate = true;
+        const context = await setup("add-reading", state);
+        await waitFor(() => context.query("[data-edit-reading]"));
+        context.query("[data-edit-reading]").click();
+        context.query('[name="heart_rate"]').value = "99";
+        context.query("#editReadingForm").requestSubmit();
+        await waitFor(() => context.query("[data-edit-error]").textContent.includes("Unable to update"));
+        assert(context.query('[name="heart_rate"]').value === "99" && state.rows[0].heart_rate === 72, "Failure lost draft or changed saved data");
+        assert(!context.query("fieldset").disabled, "Cannot retry a failed update");
+        state.failUpdate = false;
+        context.query("#editReadingForm").requestSubmit();
+        await waitFor(() => !context.query("#editReadingDialog") && state.rows[0].heart_rate === 99);
+        await waitFor(() => context.query("#savedReadingsBody").textContent.includes("99 BPM"));
+    });
+    await check("Missing records and network errors keep the edit draft available", async () => {
+        const state = database([row()]);
+        let offline = true;
+        const context = await setup("health-records", state, { fetch: (url, options = {}) => {
+            if (options.method === "PUT" && offline) return Promise.reject(new Error("Network unavailable"));
+            return state.fetch(url, options);
+        } });
+        await waitFor(() => context.query("[data-edit-reading]"));
+        context.query("[data-edit-reading]").click();
+        context.query('[name="heart_rate"]').value = "99";
+        context.query("#editReadingForm").requestSubmit();
+        await waitFor(() => context.query("[data-edit-error]").textContent.includes("Network unavailable"));
+        offline = false;
+        state.rows = [];
+        context.query("#editReadingForm").requestSubmit();
+        await waitFor(() => context.query("[data-edit-error]").textContent.includes("not found"));
+        assert(context.query('[name="heart_rate"]').value === "99", "Missing-record response discarded input");
+        context.query("[data-edit-cancel]").click();
+    });
+    await check("A pending edit blocks duplicate requests and preserves the draft during focus refresh", async () => {
+        const state = database([row()]);
+        let finishUpdate;
+        let updates = 0;
+        const context = await setup("health-records", state, { fetch: (url, options = {}) => {
+            if (options.method === "PUT") {
+                updates++;
+                return new Promise(resolve => { finishUpdate = async () => resolve(await state.fetch(url, options)); });
+            }
+            return state.fetch(url, options);
+        } });
+        await waitFor(() => context.query("[data-edit-reading]"));
+        context.query("[data-edit-reading]").click();
+        context.query('[name="heart_rate"]').value = "99";
+        context.query("#editReadingForm").requestSubmit();
+        context.query("#editReadingForm").requestSubmit();
+        const cancelEvent = new context.win.Event("cancel", { cancelable: true });
+        context.query("#editReadingDialog").dispatchEvent(cancelEvent);
+        assert(cancelEvent.defaultPrevented, "Escape could dismiss a pending save");
+        assert(context.query("[data-edit-cancel]").matches(":disabled"), "Cancel is active during a save");
+        context.win.dispatchEvent(new context.win.Event("focus"));
+        await pause(100);
+        assert(updates === 1 && context.query('[name="heart_rate"]').value === "99", "Duplicate request or lost draft");
+        await finishUpdate();
+        await waitFor(() => !context.query("#editReadingDialog")?.open);
+        assert(state.rows[0].heart_rate === 99, "Pending update was not saved");
+    });
+    await check("Edit dialog fits a mobile viewport and keeps labelled controls accessible", async () => {
+        const context = await setup("health-records", database([row()]));
+        context.frame.style.width = "375px";
+        await waitFor(() => context.query("[data-edit-reading]"));
+        context.query("[data-edit-reading]").click();
+        const dialog = context.query("#editReadingDialog");
+        assert(dialog.getBoundingClientRect().width <= 375, "Dialog overflows mobile viewport");
+        assert(dialog.scrollWidth <= dialog.clientWidth + 1, "Dialog content overflows horizontally");
+        assert(context.query('[name="heart_rate"]').labels.length === 1, "Edit input lacks a label");
+        assert(context.frame.contentDocument.activeElement.name === "heart_rate", "Focus did not enter the editor");
+        context.query("[data-edit-cancel]").click();
+    });
+    await check("Alert cards show the requested patient values, badges, thresholds, icons, and actions", async () => {
+        const state = database([row()]);
+        const context = await setup("health-alerts", state);
+        await waitFor(() => context.query(".no-alert-message"));
+        const cases = [
+            ["temperature", 39, "°C", "High", "Greater than 38°C", "orange"],
+            ["heart_rate", 110, "BPM", "High", "Greater than 100 BPM", "red"],
+            ["spo2", 93, "%", "Low", "Less than 95%", "blue"],
+            ["systolic", 145, "mmHg", "High", "Greater than 140 mmHg", "red"],
+            ["diastolic", 95, "mmHg", "High", "Greater than 90 mmHg", "red"]
+        ];
+        for (const [field, value, unit, status, threshold, tone] of cases) {
+            state.rows = [row({ [field]: value })];
+            context.win.dispatchEvent(new context.win.Event("smarthealth:readings-changed"));
+            await waitFor(() => context.query(`[data-alert-field="${field}"]`));
+            const card = context.query(`[data-alert-field="${field}"]`);
+            assert(context.frame.contentDocument.querySelectorAll(".health-alert-card").length === 1, "Unmatched cards were rendered");
+            assert(card.querySelector(".alert-recorded-value").textContent === `${value} ${unit}`, "Value or unit differs from the API response");
+            assert(card.querySelector(".alert-status-badge").textContent === status, "Wrong High/Low badge");
+            assert(card.querySelector(".alert-threshold").textContent === threshold, "Threshold changed");
+            assert(card.classList.contains("alert-tone-" + tone), "Wrong parameter color");
+            assert(card.querySelector("svg path") && card.querySelector("svg").getAttribute("aria-hidden") === "true", "Medical icon is missing or not decorative");
+            assert(card.querySelector(".alert-explanation").textContent.includes("project's demonstration threshold"), "Explanation is missing");
+            assert(card.querySelector(".alert-suggested-action").textContent.includes("qualified healthcare professional"), "Cautious action is missing");
+            assert(context.query("#alertMatchCount").textContent === "1 alert matched", "Single match count incorrect");
+        }
+    });
+    await check("Match counts, neutral, empty, incomplete, and error states stay distinct", async () => {
+        const state = database([row({ heart_rate: 110, spo2: 93, temperature: 39 })]);
+        const context = await setup("health-alerts", state);
+        await waitFor(() => context.query("#alertMatchCount").textContent === "3 alerts matched");
+        assert(context.frame.contentDocument.querySelectorAll(".health-alert-card").length === 3, "Multiple matches count differs from cards");
+        assert(context.query("#alertReadingContext time").dateTime === "2020-01-02T10:30", "Analyzed measurement time is wrong");
+        state.rows = [row()];
+        context.win.dispatchEvent(new context.win.Event("focus"));
+        await waitFor(() => context.query("#alertMatchCount").textContent === "0 alerts matched");
+        assert(context.query(".no-alert-message h3").textContent === "No demonstration alert thresholds matched your latest reading.", "Neutral message differs from the requested text");
+        assert(context.query(".no-alert-message p").textContent.includes("does not confirm"), "No-match result implies medical safety");
+        state.rows = [];
+        context.win.dispatchEvent(new context.win.Event("focus"));
+        await waitFor(() => context.query("#alertSummary").textContent === "No health readings available.");
+        assert(context.query('#alertsContainer a[href="add-reading.html"]'), "Empty state needs an Add Reading link");
+        assert(context.query("#alertMatchCount").hidden && context.query("#alertReadingContext").hidden, "Empty state retained a previous analysis");
+        state.rows = [row({ heart_rate: null, spo2: 93 })];
+        context.win.dispatchEvent(new context.win.Event("focus"));
+        await waitFor(() => context.query("#alertSummary").textContent.includes("unavailable"));
+        assert(context.query("#alertMatchCount").textContent === "1 alert matched", "Incomplete reading lost the available match");
+        assert(context.query(".no-alert-message").textContent.includes("Heart Rate"), "Incomplete reading lacks missing parameter names");
+        state.fail = true;
+        context.win.dispatchEvent(new context.win.Event("focus"));
+        await waitFor(() => context.query(".alert-load-error"));
+        assert(context.query("#alertMatchCount").hidden && context.query("#alertReadingContext").hidden, "Error kept a stale count or measurement date");
+        assert(!context.query("#alertsContainer a") && !context.query(".health-alert-card"), "Error was treated as empty or successful data");
+    });
+    await check("Health Alerts replaces the prior patient's cards with the current API patient's reading", async () => {
+        const state = database([row({ id: 5, heart_rate: 110 })]);
+        const context = await setup("health-alerts", state);
+        await waitFor(() => context.query('[data-alert-field="heart_rate"]'));
+        state.rows = [row({ id: 8, spo2: 93, measured_at: "2020-02-01T12:00" })];
+        context.win.dispatchEvent(new context.win.Event("focus"));
+        await waitFor(() => context.query('[data-alert-field="spo2"]'));
+        assert(!context.query('[data-alert-field="heart_rate"]'), "Previous patient's alert remains");
+        assert(context.query("#alertMatchCount").textContent === "1 alert matched", "Previous patient's count remains");
+        assert(context.query("#alertReadingContext time").dateTime === "2020-02-01T12:00", "Previous patient's measurement time remains");
+        assert(!context.query("#alertsContainer").textContent.includes("110"), "Previous patient's measurement remains");
+    });
+    await check("Disclaimer and optional consultation remain visible in every analysis state", async () => {
+        const context = await setup("health-alerts", database([row({ temperature: 39 })]));
+        await waitFor(() => context.query(".health-alert-card"));
+        const disclaimer = "These alerts are generated using predefined academic demonstration thresholds. They do not provide a medical diagnosis or confirm whether a patient is medically safe. For medical concerns, seek advice from a qualified healthcare professional.";
+        for (const reading of [row({ temperature: 39 }), row(), null]) {
+            context.win.displayHealthAlerts(reading);
+            assert(context.query(".alert-disclaimer").textContent.includes(disclaimer), "Required medical disclaimer missing");
+            assert(context.query(".alert-urgent-guidance").textContent.includes("immediately"), "Severe symptom guidance suggests waiting");
+            assert(context.query("#consultation .primary-button").getAttribute("href") === "consultation.html", "Consultation navigation changed");
+            assert(context.query(".consultation-choice").textContent.includes("optional"), "Consultation does not describe patient choice");
+            assert(context.query("#consultation svg"), "Consultation icon missing");
+        }
+        context.win.displayHealthAlerts(null, "Network unavailable");
+        assert(context.query(".alert-disclaimer") && context.query("#consultation .primary-button"), "Error hides consultation or disclaimer");
+        assert(context.win.location.pathname !== "/consultation.html", "Consultation opened automatically");
+    });
+    await check("Health alert cards fit desktop, laptop, tablet, and mobile with up to three columns", async () => {
+        const context = await setup("health-alerts", database([row({ heart_rate: 110, spo2: 93, systolic: 145, diastolic: 95, temperature: 39 })]));
+        await waitFor(() => context.frame.contentDocument.querySelectorAll(".health-alert-card").length === 5);
+        for (const [width, expectedColumns] of [[1440, 3], [1280, 3], [1100, 2], [768, 2], [390, 1], [320, 1]]) {
+            context.frame.style.width = width + "px";
+            const doc = context.frame.contentDocument;
+            const grid = context.query(".alerts-container");
+            assert(context.win.getComputedStyle(grid).gridTemplateColumns.split(" ").length === expectedColumns, `Wrong grid column count at ${width}px`);
+            assert(doc.documentElement.scrollWidth <= width + 1, `Page overflows at ${width}px`);
+            if (width <= 650) {
+                const heading = context.query(".alert-section-header > div").getBoundingClientRect();
+                const count = context.query("#alertMatchCount").getBoundingClientRect();
+                assert(count.top >= heading.bottom && heading.width >= 140, `Match count squeezes the mobile reading heading at ${width}px`);
+            }
+            const cards = [...doc.querySelectorAll(".health-alert-card")];
+            for (const card of cards) {
+                assert(card.scrollWidth <= card.clientWidth + 1, `Alert content overflows at ${width}px`);
+                const icon = card.querySelector("svg").getBoundingClientRect();
+                assert(icon.width === 24 && icon.height === 24, `Icon sizing broke at ${width}px`);
+            }
+            for (let index = 1; index < cards.length; index++) {
+                const previous = cards[index - 1].getBoundingClientRect();
+                const current = cards[index].getBoundingClientRect();
+                assert(current.top >= previous.bottom || current.left >= previous.right, `Cards overlap at ${width}px`);
+            }
+            const button = context.query("#consultation .primary-button");
+            assert(button.getBoundingClientRect().right <= width, `Consultation button overflows at ${width}px`);
+        }
+    });
     await check("No unexpected JavaScript errors", async () => {
         assert(runtimeErrors.length === 0, runtimeErrors.join("; "));
     });

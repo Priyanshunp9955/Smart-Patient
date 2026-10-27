@@ -1,0 +1,362 @@
+/* Health Alerts only: retain the shared portal, navigation and account layout. */
+.health-alerts-page .alert-analysis-panel {
+    padding: 20px;
+}
+
+.health-alerts-page #health-alerts,
+.health-alerts-page #consultation {
+    margin-bottom: 24px;
+}
+
+.health-alerts-page .alert-section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+}
+
+.health-alerts-page .alert-section-header > div {
+    min-width: 0;
+    flex: 1;
+}
+
+.health-alerts-page .analysis-icon,
+.health-alerts-page .consultation-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    color: var(--primary-dark);
+    background: #eaf7f8;
+}
+
+.health-alerts-page :is(.alert-analysis-panel, .alert-consultation-panel) svg {
+    display: block;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.health-alerts-page #alertReadingContext {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--text);
+    overflow-wrap: anywhere;
+}
+
+.health-alerts-page .alert-match-count {
+    padding: 4px 10px;
+    border: 1px solid #cee7eb;
+    border-radius: 20px;
+    background: #f0f9fa;
+    color: var(--primary-dark);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.health-alerts-page .alerts-container {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 14px;
+}
+
+.health-alerts-page .health-alert-card {
+    --alert-accent: #a9313c;
+    --alert-soft: #fceef0;
+    --alert-border: #f0d7db;
+    --alert-surface: #fffafb;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid var(--alert-border);
+    border-top: 3px solid var(--alert-accent);
+    border-radius: 14px;
+    background: var(--alert-surface);
+    box-shadow: 0 3px 12px rgb(20 45 67 / 4%);
+    overflow-wrap: anywhere;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.health-alerts-page .alert-tone-blue {
+    --alert-accent: #246797;
+    --alert-soft: #e8f2fb;
+    --alert-border: #d2e4f2;
+    --alert-surface: #f8fbff;
+}
+
+.health-alerts-page .alert-tone-orange {
+    --alert-accent: #a35914;
+    --alert-soft: #fff0de;
+    --alert-border: #f1dfc7;
+    --alert-surface: #fffbf5;
+}
+
+.health-alerts-page .alert-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.health-alerts-page .alert-parameter-icon {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: var(--alert-soft);
+    color: var(--alert-accent);
+}
+
+.health-alerts-page .alert-status-badge {
+    padding: 3px 10px;
+    border-radius: 16px;
+    background: var(--alert-soft);
+    color: var(--alert-accent);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.health-alerts-page .health-alert-card h3 {
+    margin-bottom: 10px;
+    color: var(--heading);
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.health-alerts-page .alert-measurements dt {
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.health-alerts-page .alert-recorded-value {
+    margin: 2px 0 10px;
+    color: var(--alert-accent);
+    line-height: 1.3;
+}
+
+.health-alerts-page .alert-recorded-value strong {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -1px;
+}
+
+.health-alerts-page .alert-recorded-value span {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+.health-alerts-page .alert-threshold {
+    margin-top: 3px;
+    color: var(--heading);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.health-alerts-page .health-alert-card p {
+    color: var(--text);
+    font-size: 12px;
+    line-height: 1.65;
+    margin: 0;
+}
+
+.health-alerts-page .health-alert-card .alert-explanation {
+    margin: 8px 0 12px;
+}
+
+.health-alerts-page .alert-suggested-action {
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid var(--alert-border);
+}
+
+.health-alerts-page .alert-suggested-action h4 {
+    margin-bottom: 5px;
+    color: var(--heading);
+    font-size: 12px;
+}
+
+.health-alerts-page .alert-state-message {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #f5f9fb;
+    color: var(--text);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.health-alerts-page .alert-state-message > svg {
+    color: var(--primary-dark);
+}
+
+.health-alerts-page .alert-state-message h3 {
+    margin-bottom: 6px;
+    color: var(--heading);
+    font-size: 15px;
+}
+
+.health-alerts-page .alert-state-message .feature-page-link {
+    display: inline-block;
+    margin-top: 12px;
+}
+
+.health-alerts-page .alert-disclaimer {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 16px;
+    border: 1px solid #d4e9ee;
+    border-radius: 12px;
+    background: #f0f8fa;
+    color: #435f70;
+    font-size: 12px;
+}
+
+.health-alerts-page .alert-disclaimer svg {
+    color: var(--primary-dark);
+}
+
+.health-alerts-page .alert-disclaimer h3 {
+    margin-bottom: 6px;
+    color: var(--heading);
+    font-size: 13px;
+}
+
+.health-alerts-page .alert-urgent-guidance {
+    margin-top: 8px;
+    font-weight: 600;
+}
+
+.health-alerts-page .alert-consultation-panel {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+}
+
+.health-alerts-page .consultation-icon {
+    flex-basis: 48px;
+    width: 48px;
+    height: 48px;
+    background: white;
+    border: 1px solid #d2eaed;
+    border-radius: 12px;
+}
+
+.health-alerts-page .consultation-icon svg {
+    width: 28px;
+    height: 28px;
+}
+
+.health-alerts-page .alert-consultation-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.health-alerts-page .alert-consultation-panel h2 {
+    font-size: 17px;
+    margin-bottom: 6px;
+}
+
+.health-alerts-page .consultation-choice {
+    margin-top: 8px;
+    color: var(--primary-dark);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.health-alerts-page .alert-consultation-panel .primary-button {
+    flex: 0 1 240px;
+    text-align: center;
+    font-size: 13px;
+}
+
+.health-alerts-page .primary-button:focus-visible,
+.health-alerts-page .feature-page-link:focus-visible {
+    outline: 2px solid var(--primary-dark);
+    outline-offset: 4px;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .health-alerts-page .health-alert-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgb(20 45 67 / 8%);
+    }
+}
+
+@media (max-width: 1250px) {
+    .health-alerts-page .alerts-container {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .health-alerts-page .alert-consultation-panel {
+        flex-wrap: wrap;
+    }
+
+    .health-alerts-page .alert-consultation-panel .primary-button {
+        flex-basis: auto;
+        margin-left: 64px;
+    }
+}
+
+@media (max-width: 650px) {
+    .health-alerts-page .alert-analysis-panel {
+        padding: 14px;
+    }
+
+    .health-alerts-page .alert-section-header {
+        display: grid;
+        grid-template-columns: 40px minmax(0, 1fr);
+    }
+
+    .health-alerts-page .alert-match-count {
+        grid-column: 2;
+        justify-self: start;
+    }
+
+    .health-alerts-page .alerts-container {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .health-alerts-page .health-alert-card,
+    .health-alerts-page .alert-state-message {
+        padding: 14px;
+    }
+
+    .health-alerts-page .alert-disclaimer {
+        padding: 14px;
+    }
+
+    .health-alerts-page .alert-consultation-panel {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+    }
+
+    .health-alerts-page .alert-consultation-panel .primary-button {
+        width: 100%;
+        margin-left: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .health-alerts-page .health-alert-card {
+        transition: none;
+    }
+}

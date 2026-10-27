@@ -59,7 +59,7 @@ def main():
             elif self.path.startswith("/assets/js/") and self.path[11:] in scripts:
                 data = scripts[self.path[11:]].encode("utf-8")
                 content_type = "text/javascript; charset=utf-8"
-            elif self.path in {"/assets/css/style.css", "/assets/css/notifications.css", "/assets/css/page-layout.css", "/assets/css/profile.css"}:
+            elif self.path in {"/assets/css/style.css", "/assets/css/notifications.css", "/assets/css/page-layout.css", "/assets/css/profile.css", "/assets/css/health-alerts.css"}:
                 css = (ROOT / "frontend" / self.path.lstrip("/")).read_text(encoding="utf-8")
                 # Font URLs contain semicolons; consume the whole url(), not the
                 # first weight separator, so the following :root rule stays valid.

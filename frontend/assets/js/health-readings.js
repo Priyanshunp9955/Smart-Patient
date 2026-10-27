@@ -52,6 +52,144 @@
         return result;
     }
 
+    async function update(id, reading) {
+        if (!Number.isSafeInteger(id) || id < 1) {
+            throw new Error("This health reading has an invalid record ID. Refresh and try again.");
+        }
+        const result = await request({
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "X-SmartHealth-Action": "edit-reading"
+            },
+            body: JSON.stringify(reading)
+        }, `/api/readings/${id}`);
+        publishChange();
+        return result;
+    }
+
+    function createEditButton(reading) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "edit-reading-button";
+        button.textContent = "Edit";
+        button.dataset.editReading = reading.id;
+        button.setAttribute("aria-label", `Edit health reading #${reading.id}`);
+        button.addEventListener("click", () => openEditor(reading));
+        return button;
+    }
+
+    function openEditor(reading) {
+        if (document.querySelector("#editReadingDialog")) return;
+        const id = Number(reading.id);
+        const dialog = document.createElement("dialog");
+        dialog.id = "editReadingDialog";
+        dialog.className = "reading-edit-dialog";
+        dialog.setAttribute("aria-labelledby", "editReadingTitle");
+        dialog.setAttribute("aria-describedby", "editReadingDescription");
+        // This markup is static. Patient values are assigned only through value/textContent.
+        dialog.innerHTML = `
+            <form id="editReadingForm">
+                <h2 id="editReadingTitle">Edit Health Reading</h2>
+                <p id="editReadingDescription"></p>
+                <fieldset class="reading-edit-fields">
+                    <div class="reading-form-grid"></div>
+                    <p class="form-message error" data-edit-error role="alert"></p>
+                    <div class="reading-form-actions">
+                        <button type="button" class="secondary-button" data-edit-cancel>Cancel</button>
+                        <button type="submit" class="auth-submit">Save Changes</button>
+                    </div>
+                </fieldset>
+            </form>`;
+        dialog.querySelector("#editReadingDescription").textContent =
+            `Update the measurements for record #${id}. Fields marked with * are required.`;
+        const grid = dialog.querySelector(".reading-form-grid");
+        const fields = [
+            ["heart_rate", "Heart Rate (BPM)", 20, 250, "1"],
+            ["spo2", "Blood Oxygen - SpO2 (%)", 0, 100, "any"],
+            ["systolic", "Systolic Blood Pressure (mmHg)", 40, 300, "1"],
+            ["diastolic", "Diastolic Blood Pressure (mmHg)", 20, 200, "1"],
+            ["temperature", "Body Temperature (°C)", 25, 45, "any"],
+            ["measured_at", "Measurement Date & Time"]
+        ];
+        const inputs = {};
+        for (const [name, title, min, max, step] of fields) {
+            const group = document.createElement("div");
+            group.className = "form-group";
+            const label = document.createElement("label");
+            label.htmlFor = `editReading-${name}`;
+            label.textContent = `${title} *`;
+            const input = document.createElement("input");
+            input.id = label.htmlFor;
+            input.name = name;
+            input.required = true;
+            input.type = name === "measured_at" ? "datetime-local" : "number";
+            if (min !== undefined) {
+                input.min = min;
+                input.max = max;
+                input.step = step;
+            } else {
+                const now = new Date();
+                input.max = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+            }
+            input.value = reading[name] ?? "";
+            inputs[name] = input;
+            group.append(label, input);
+            grid.appendChild(group);
+        }
+        let saving = false;
+        const form = dialog.querySelector("form");
+        const fieldset = dialog.querySelector("fieldset");
+        const submit = dialog.querySelector('[type="submit"]');
+        const errorMessage = dialog.querySelector("[data-edit-error]");
+        dialog.querySelector("[data-edit-cancel]").addEventListener("click", () => dialog.close());
+        dialog.addEventListener("cancel", event => {
+            if (saving) event.preventDefault();
+        });
+        dialog.addEventListener("close", () => {
+            dialog.remove();
+            document.querySelector(`[data-edit-reading="${id}"]`)?.focus();
+        }, { once: true });
+        form.addEventListener("submit", async event => {
+            event.preventDefault();
+            if (saving || !form.reportValidity()) return;
+            errorMessage.textContent = "";
+            const values = Object.fromEntries(fields.map(([name]) => [
+                name, name === "measured_at" ? inputs[name].value : Number(inputs[name].value)
+            ]));
+            if (values.systolic <= values.diastolic) {
+                errorMessage.textContent = "Systolic blood pressure must be greater than diastolic.";
+                inputs.systolic.focus();
+                return;
+            }
+            if (new Date(values.measured_at).getTime() > Date.now()) {
+                errorMessage.textContent = "Measurement date cannot be in the future.";
+                inputs.measured_at.focus();
+                return;
+            }
+            saving = true;
+            fieldset.disabled = true;
+            form.setAttribute("aria-busy", "true");
+            submit.textContent = "Saving...";
+            try {
+                await update(id, values);
+                dialog.close();
+                window.SmartHealth.notify("Health reading updated successfully.", "success");
+            } catch (error) {
+                if (error.status !== 401) {
+                    errorMessage.textContent = error.message || "Unable to update health reading. Please try again.";
+                }
+            } finally {
+                saving = false;
+                fieldset.disabled = false;
+                form.removeAttribute("aria-busy");
+                submit.textContent = "Save Changes";
+            }
+        });
+        document.body.appendChild(dialog);
+        dialog.showModal();
+    }
+
     function publishChange() {
         // Publish only an invalidation signal, never patient records.
         window.dispatchEvent(new Event("smarthealth:readings-changed"));
@@ -139,6 +277,6 @@
 
     window.SmartHealth = {
         ...window.SmartHealth,
-        readings: { list, save, remove, createDeleteButton, onChange }
+        readings: { list, save, update, remove, createEditButton, createDeleteButton, onChange }
     };
 })();

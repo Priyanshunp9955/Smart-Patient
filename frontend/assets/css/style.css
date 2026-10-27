@@ -1347,6 +1347,15 @@ a {
     border-bottom: none;
 }
 
+.reading-actions {
+    white-space: nowrap;
+}
+
+.edit-reading-button {
+    margin-right: 8px;
+}
+
+.edit-reading-button,
 .delete-reading-button {
     padding: 8px 12px;
     border: 1px solid var(--border);
@@ -1359,18 +1368,64 @@ a {
     white-space: nowrap;
 }
 
+.edit-reading-button {
+    color: var(--primary-dark);
+}
+
+.edit-reading-button:hover {
+    background: #e6f5f6;
+}
+
 .delete-reading-button:hover {
     background: #fff3f1;
 }
 
+.edit-reading-button:focus-visible,
 .delete-reading-button:focus-visible {
     outline: 2px solid var(--primary-dark);
     outline-offset: 3px;
 }
 
+.edit-reading-button:disabled,
 .delete-reading-button:disabled {
     opacity: 0.65;
     cursor: wait;
+}
+
+.reading-edit-dialog {
+    width: min(640px, calc(100% - 32px));
+    max-height: calc(100dvh - 32px);
+    margin: auto;
+    padding: 28px;
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    background: var(--white);
+    color: var(--heading);
+    overflow-y: auto;
+}
+
+.reading-edit-dialog::backdrop {
+    background: rgb(20 45 67 / 55%);
+}
+
+.reading-edit-dialog h2 {
+    font-size: 22px;
+    margin-bottom: 8px;
+}
+
+.reading-edit-dialog #editReadingDescription {
+    margin-bottom: 22px;
+    font-size: 14px;
+}
+
+.reading-edit-fields {
+    border: 0;
+    padding: 0;
+    min-width: 0;
+}
+
+.reading-edit-dialog [data-edit-error]:empty {
+    display: none;
 }
 
 /* Alert Preview */
