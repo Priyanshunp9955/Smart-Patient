@@ -1,6 +1,89 @@
 
 "use strict";
 
+// Homepage navigation only; leave shared authentication behavior unchanged.
+(() => {
+    const header = document.querySelector(".home-page .site-header");
+    if (!header) return;
+
+    const toggle = header.querySelector(".nav-toggle");
+    const panel = header.querySelector(".homepage-navigation");
+    const links = Array.from(header.querySelectorAll('.nav-links a[href^="#"]'));
+    const sections = links.map(link => document.getElementById(link.hash.slice(1)));
+    const mobile = window.matchMedia("(max-width: 1100px)");
+
+    function setExpanded(expanded, restoreFocus = false) {
+        panel.hidden = mobile.matches && !expanded;
+        toggle.setAttribute("aria-expanded", String(!panel.hidden));
+        toggle.setAttribute("aria-label", panel.hidden ? "Open navigation menu" : "Close navigation menu");
+        if (restoreFocus) toggle.focus({ preventScroll: true });
+    }
+
+    function syncLayout() {
+        const focusInPanel = panel.contains(document.activeElement);
+        const focusOnToggle = document.activeElement === toggle;
+        setExpanded(!mobile.matches, mobile.matches && focusInPanel);
+        if (!mobile.matches && focusOnToggle) {
+            header.querySelector(".logo").focus({ preventScroll: true });
+        }
+    }
+
+    toggle.addEventListener("click", () => setExpanded(panel.hidden));
+    panel.addEventListener("click", event => {
+        if (mobile.matches && event.target.closest("a")) setExpanded(false, true);
+    });
+    header.addEventListener("keydown", event => {
+        if (event.key === "Escape" && mobile.matches && !panel.hidden) {
+            event.preventDefault();
+            setExpanded(false, true);
+        }
+    });
+    document.addEventListener("click", event => {
+        if (mobile.matches && !panel.hidden && !header.contains(event.target)) {
+            setExpanded(false, panel.contains(document.activeElement));
+        }
+    });
+    header.addEventListener("focusout", event => {
+        if (mobile.matches && event.relatedTarget && !header.contains(event.relatedTarget)) {
+            setExpanded(false);
+        }
+    });
+    mobile.addEventListener("change", syncLayout);
+    header.classList.add("is-enhanced");
+    syncLayout();
+
+    function updateActiveLink() {
+        const activationLine = header.getBoundingClientRect().bottom + 24;
+        let activeIndex = 0;
+        sections.forEach((section, index) => {
+            if (section && section.getBoundingClientRect().top <= activationLine) activeIndex = index;
+        });
+        // The final section may be too short to reach the activation line.
+        if (window.scrollY > 0 && Math.ceil(window.scrollY + window.innerHeight) >= document.documentElement.scrollHeight - 2) {
+            activeIndex = links.length - 1;
+        }
+        links.forEach((link, index) => {
+            if (index === activeIndex) link.setAttribute("aria-current", "location");
+            else link.removeAttribute("aria-current");
+        });
+    }
+
+    let framePending = false;
+    function scheduleActiveLinkUpdate() {
+        if (framePending) return;
+        framePending = true;
+        window.requestAnimationFrame(() => {
+            updateActiveLink();
+            framePending = false;
+        });
+    }
+    window.addEventListener("scroll", scheduleActiveLinkUpdate, { passive: true });
+    window.addEventListener("resize", scheduleActiveLinkUpdate);
+    window.addEventListener("hashchange", scheduleActiveLinkUpdate);
+    window.addEventListener("pageshow", scheduleActiveLinkUpdate);
+    updateActiveLink();
+})();
+
 const REGISTERED_EMAIL_KEY = "smarthealth_registered_email";
 
 // Password visibility control
