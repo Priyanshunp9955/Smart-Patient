@@ -159,7 +159,6 @@
         passwordForm.reset();
         passwordInputs.forEach(input => { input.value = ""; input.type = "password"; });
         passwordToggles.forEach(toggle => {
-            toggle.textContent = "Show";
             toggle.setAttribute("aria-pressed", "false");
             toggle.setAttribute("aria-label", "Show " + toggle.dataset.passwordLabel);
         });
@@ -171,7 +170,6 @@
             const input = document.getElementById(toggle.dataset.changePasswordToggle);
             const showing = input.type === "password";
             input.type = showing ? "text" : "password";
-            toggle.textContent = showing ? "Hide" : "Show";
             toggle.setAttribute("aria-pressed", String(showing));
             toggle.setAttribute("aria-label", (showing ? "Hide " : "Show ") + toggle.dataset.passwordLabel);
         });

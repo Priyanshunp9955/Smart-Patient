@@ -56,6 +56,11 @@
 .profile-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .password-change-section { border-top: 1px solid var(--border); margin-top: 24px; padding-top: 24px; }
 .password-change-section .profile-status { margin-top: 18px; margin-bottom: 0; }
+.password-change-section .password-field input { padding-right: 52px; }
+.password-change-section .password-toggle { display: inline-flex; align-items: center; justify-content: center; right: 4px; width: 40px; height: 40px; padding: 0; border-radius: 6px; }
+.password-change-section .password-toggle:hover:not(:disabled) { color: var(--primary-dark); background: #e9f7f7; }
+.password-change-section .password-toggle svg { width: 20px; height: 20px; pointer-events: none; }
+.password-change-section .password-toggle[aria-pressed="true"] .password-eye-slash { display: none; }
 .password-change-section .password-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 .password-change-section .reading-form-actions { flex-direction: row; }
 .password-change-section .reading-form-actions .auth-submit { width: auto; }
