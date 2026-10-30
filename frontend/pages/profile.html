@@ -80,106 +80,108 @@
                             <p>Your email is linked to your sign-in and is read-only. Optional details can be left blank if unknown.</p>
                         </div>
                     </aside>
-                    <section class="reading-form-card patient-profile-card" aria-labelledby="profileHeading">
-                        <div class="reading-form-heading patient-profile-heading">
-                            <div>
-                                <h2 id="profileHeading">Personal Information</h2>
-                                <p id="profileHint">Your saved patient details.</p>
+                    <div class="reading-form-card patient-profile-card">
+                        <section aria-labelledby="profileHeading">
+                            <div class="reading-form-heading patient-profile-heading">
+                                <div>
+                                    <h2 id="profileHeading">Personal Information</h2>
+                                    <p id="profileHint">Your saved patient details.</p>
+                                </div>
+                                <button id="editProfile" type="button" class="logout-button">Edit Profile</button>
                             </div>
-                            <button id="editProfile" type="button" class="logout-button">Edit Profile</button>
-                        </div>
-                        <dl id="profileDetails" class="patient-profile-details">
-                            <div><dt>Full name</dt><dd data-profile-field="full_name"></dd></div>
-                            <div><dt>Email address</dt><dd data-profile-field="email"></dd></div>
-                            <div><dt>Phone number</dt><dd data-profile-field="phone"></dd></div>
-                            <div><dt>Date of birth</dt><dd data-profile-field="date_of_birth"></dd></div>
-                            <div><dt>Gender</dt><dd data-profile-field="gender"></dd></div>
-                            <div><dt>Blood group</dt><dd data-profile-field="blood_group"></dd></div>
-                        </dl>
-                        <form id="profileForm" hidden>
-                            <fieldset id="profileFields" disabled>
-                                <legend class="profile-sr-only">Edit personal information</legend>
-                                <div class="reading-form-grid">
-                                    <div class="form-group">
-                                        <label for="fullName">Full name *</label>
-                                        <input id="fullName" name="full_name" type="text" autocomplete="name" maxlength="100" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="profileEmail">Email address (read-only)</label>
-                                        <input id="profileEmail" type="email" autocomplete="email" readonly aria-describedby="emailHint">
-                                        <small id="emailHint">Your sign-in email cannot be changed here.</small>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="profilePhone">Phone number</label>
-                                        <input id="profilePhone" name="phone" type="tel" autocomplete="tel" maxlength="32" placeholder="e.g. +91 98765 43210" aria-describedby="phoneHint">
-                                        <small id="phoneHint">7 to 15 digits, including country code.</small>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="dateOfBirth">Date of birth</label>
-                                        <input id="dateOfBirth" name="date_of_birth" type="date" autocomplete="bday" min="1900-01-01">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="profileGender">Gender</label>
-                                        <select id="profileGender" name="gender">
-                                            <option value="">Not specified</option>
-                                            <option>Female</option><option>Male</option>
-                                            <option>Non-binary</option><option>Prefer not to say</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="bloodGroup">Blood group</label>
-                                        <select id="bloodGroup" name="blood_group">
-                                            <option value="">Not specified</option>
-                                            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
-                                            <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="reading-form-actions">
-                                    <button id="cancelProfile" type="button" class="secondary-button">Cancel</button>
-                                    <button id="saveProfile" type="submit" class="auth-submit">Save Changes</button>
-                                </div>
-                            </fieldset>
-                        </form>
-                    </section>
-                    <section class="reading-form-card patient-profile-card password-change-card" aria-labelledby="passwordHeading">
-                        <div class="reading-form-heading">
-                            <h2 id="passwordHeading">Change Password</h2>
-                            <p id="passwordHelp">Choose a new password with at least 8 characters, different from your current password.</p>
-                        </div>
-                        <form id="changePasswordForm" aria-describedby="passwordHelp">
-                            <fieldset id="changePasswordFields">
-                                <legend class="profile-sr-only">Change your account password</legend>
-                                <div class="form-group">
-                                    <label for="currentPassword">Current Password *</label>
-                                    <div class="password-field">
-                                        <input id="currentPassword" name="current_password" type="password" autocomplete="current-password" maxlength="1024" required>
-                                        <button type="button" class="password-toggle" data-change-password-toggle="currentPassword" aria-controls="currentPassword" aria-label="Show current password" aria-pressed="false">Show</button>
-                                    </div>
-                                </div>
-                                <div class="reading-form-grid">
-                                    <div class="form-group">
-                                        <label for="newPassword">New Password *</label>
-                                        <div class="password-field">
-                                            <input id="newPassword" name="new_password" type="password" autocomplete="new-password" minlength="8" maxlength="1024" required>
-                                            <button type="button" class="password-toggle" data-change-password-toggle="newPassword" aria-controls="newPassword" aria-label="Show new password" aria-pressed="false">Show</button>
+                            <dl id="profileDetails" class="patient-profile-details">
+                                <div><dt>Full name</dt><dd data-profile-field="full_name"></dd></div>
+                                <div><dt>Email address</dt><dd data-profile-field="email"></dd></div>
+                                <div><dt>Phone number</dt><dd data-profile-field="phone"></dd></div>
+                                <div><dt>Date of birth</dt><dd data-profile-field="date_of_birth"></dd></div>
+                                <div><dt>Gender</dt><dd data-profile-field="gender"></dd></div>
+                                <div><dt>Blood group</dt><dd data-profile-field="blood_group"></dd></div>
+                            </dl>
+                            <form id="profileForm" hidden>
+                                <fieldset id="profileFields" disabled>
+                                    <legend class="profile-sr-only">Edit personal information</legend>
+                                    <div class="reading-form-grid">
+                                        <div class="form-group">
+                                            <label for="fullName">Full name *</label>
+                                            <input id="fullName" name="full_name" type="text" autocomplete="name" maxlength="100" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="profileEmail">Email address (read-only)</label>
+                                            <input id="profileEmail" type="email" autocomplete="email" readonly aria-describedby="emailHint">
+                                            <small id="emailHint">Your sign-in email cannot be changed here.</small>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="profilePhone">Phone number</label>
+                                            <input id="profilePhone" name="phone" type="tel" autocomplete="tel" maxlength="32" placeholder="e.g. +91 98765 43210" aria-describedby="phoneHint">
+                                            <small id="phoneHint">7 to 15 digits, including country code.</small>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="dateOfBirth">Date of birth</label>
+                                            <input id="dateOfBirth" name="date_of_birth" type="date" autocomplete="bday" min="1900-01-01">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="profileGender">Gender</label>
+                                            <select id="profileGender" name="gender">
+                                                <option value="">Not specified</option>
+                                                <option>Female</option><option>Male</option>
+                                                <option>Non-binary</option><option>Prefer not to say</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="bloodGroup">Blood group</label>
+                                            <select id="bloodGroup" name="blood_group">
+                                                <option value="">Not specified</option>
+                                                <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+                                                <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+                                            </select>
                                         </div>
                                     </div>
+                                    <div class="reading-form-actions">
+                                        <button id="cancelProfile" type="button" class="secondary-button">Cancel</button>
+                                        <button id="saveProfile" type="submit" class="auth-submit">Save Changes</button>
+                                    </div>
+                                </fieldset>
+                            </form>
+                        </section>
+                        <section class="password-change-section" aria-labelledby="passwordHeading">
+                            <div class="reading-form-heading">
+                                <h2 id="passwordHeading">Change Password</h2>
+                                <p id="passwordHelp">Choose a new password with at least 8 characters, different from your current password.</p>
+                            </div>
+                            <form id="changePasswordForm" aria-describedby="passwordHelp">
+                                <fieldset id="changePasswordFields">
+                                    <legend class="profile-sr-only">Change your account password</legend>
                                     <div class="form-group">
-                                        <label for="confirmNewPassword">Confirm New Password *</label>
+                                        <label for="currentPassword">Current Password *</label>
                                         <div class="password-field">
-                                            <input id="confirmNewPassword" name="confirm_password" type="password" autocomplete="new-password" minlength="8" maxlength="1024" required>
-                                            <button type="button" class="password-toggle" data-change-password-toggle="confirmNewPassword" aria-controls="confirmNewPassword" aria-label="Show password confirmation" aria-pressed="false">Show</button>
+                                            <input id="currentPassword" name="current_password" type="password" autocomplete="current-password" maxlength="1024" required>
+                                            <button type="button" class="password-toggle" data-change-password-toggle="currentPassword" aria-controls="currentPassword" aria-label="Show current password" aria-pressed="false">Show</button>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="reading-form-actions">
-                                    <button id="updatePassword" type="submit" class="auth-submit">Update Password</button>
-                                </div>
-                            </fieldset>
-                        </form>
-                        <p id="passwordStatus" class="profile-status" role="status" aria-live="polite"></p>
-                    </section>
+                                    <div class="reading-form-grid">
+                                        <div class="form-group">
+                                            <label for="newPassword">New Password *</label>
+                                            <div class="password-field">
+                                                <input id="newPassword" name="new_password" type="password" autocomplete="new-password" minlength="8" maxlength="1024" required>
+                                                <button type="button" class="password-toggle" data-change-password-toggle="newPassword" aria-controls="newPassword" aria-label="Show new password" aria-pressed="false">Show</button>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="confirmNewPassword">Confirm New Password *</label>
+                                            <div class="password-field">
+                                                <input id="confirmNewPassword" name="confirm_password" type="password" autocomplete="new-password" minlength="8" maxlength="1024" required>
+                                                <button type="button" class="password-toggle" data-change-password-toggle="confirmNewPassword" aria-controls="confirmNewPassword" aria-label="Show password confirmation" aria-pressed="false">Show</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="reading-form-actions">
+                                        <button id="updatePassword" type="submit" class="auth-submit">Update Password</button>
+                                    </div>
+                                </fieldset>
+                            </form>
+                            <p id="passwordStatus" class="profile-status" role="status" aria-live="polite"></p>
+                        </section>
+                    </div>
                 </div>
                 <noscript><p>Enable JavaScript to view and edit your profile.</p></noscript>
             </div>

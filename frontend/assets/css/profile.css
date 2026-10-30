@@ -1,6 +1,8 @@
 /* Profile layout; colors inherit the shared SmartHealth portal styles. */
 .profile-page .reading-form-card {
     border-radius: 20px;
+    margin-bottom: 0;
+    box-shadow: 0 4px 18px rgba(20, 45, 67, 0.04);
 }
 
 .profile-page .patient-profile-card :is(button, a):focus-visible {
@@ -34,6 +36,8 @@
 .profile-privacy-note h3 { color: var(--heading); font-size: 14px; margin-bottom: 8px; }
 .profile-privacy-note p { font-size: 12px; line-height: 1.8; }
 .patient-profile-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.patient-profile-heading > button { flex-shrink: 0; }
+.patient-profile-card .reading-form-heading { border-bottom: 0; padding-bottom: 0; margin-bottom: 24px; }
 .patient-profile-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px; }
 .patient-profile-details dt { color: #536779; font-size: 12px; margin-bottom: 6px; }
 .patient-profile-details dd { color: var(--heading); font-size: 14px; font-weight: 500; margin: 0; overflow-wrap: anywhere; }
@@ -50,15 +54,16 @@
 .profile-status.error { color: #b42318; }
 .profile-status.success { color: #087443; }
 .profile-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-.password-change-card { grid-column: 2; }
-.password-change-card .profile-status { margin-top: 18px; margin-bottom: 0; }
-.password-change-card .password-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.password-change-section { border-top: 1px solid var(--border); margin-top: 24px; padding-top: 24px; }
+.password-change-section .profile-status { margin-top: 18px; margin-bottom: 0; }
+.password-change-section .password-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.password-change-section .reading-form-actions { flex-direction: row; }
+.password-change-section .reading-form-actions .auth-submit { width: auto; }
 
 @media (max-width: 1100px) {
     .patient-profile-layout { grid-template-columns: minmax(0, 1fr); }
-    .password-change-card { grid-column: auto; }
 }
 @media (max-width: 650px) {
     .patient-profile-details { grid-template-columns: minmax(0, 1fr); gap: 20px; }
-    .patient-profile-heading { flex-wrap: wrap; }
+    .patient-profile-heading { align-items: flex-start; }
 }
