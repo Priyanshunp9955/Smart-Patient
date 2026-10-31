@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en" data-local-patient>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile | SmartHealth</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/page-layout.css">
+    <link rel="stylesheet" href="../css/notifications.css">
+    <link rel="stylesheet" href="../css/profile.css">
+</head>
+<body class="dashboard-page profile-page">
+    <noscript><p>Enable JavaScript to use local sign-in and view your saved records.</p></noscript>
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+            <a href="index.html" class="logo dashboard-logo">
+                <span class="logo-symbol">+</span> Smart<span>Health</span>
+            </a>
+            <p class="sidebar-heading">PATIENT PORTAL</p>
+            <nav class="sidebar-nav" aria-label="Patient navigation">
+                <a href="dashboard.html">Dashboard</a>
+                <a href="add-reading.html">Add Reading</a>
+                <a href="health-records.html">Health Records</a>
+                <a href="health-trends.html">Health Trends</a>
+                <a href="health-alerts.html">Health Alerts</a>
+                <a href="consultation.html">Doctor Consultation</a>
+                <a href="profile.html" class="active" aria-current="page">My Profile</a>
+            </nav>
+            <div class="sidebar-bottom">
+                <p>SmartHealth Patient Portal</p>
+                <a href="dashboard.html">Back to Dashboard</a>
+            </div>
+        </aside>
+        <main class="dashboard-main">
+            <div class="page-stage page-stage-primary">
+                <header class="dashboard-topbar">
+                    <div>
+                        <p class="dashboard-eyebrow">PATIENT ACCOUNT</p>
+                        <h1>My Profile</h1>
+                    </div>
+                    <nav class="account-navigation" aria-label="Account navigation">
+                        <div class="dashboard-profile">
+                            <a href="profile.html" class="patient-account-link" aria-label="Open My Profile">
+                            <div class="profile-avatar" data-patient-initials aria-hidden="true">?</div>
+                            <div class="profile-details">
+                                <strong data-patient-name>Loading account...</strong>
+                                <small>Patient Account</small>
+                            </div>
+                            </a>
+                            <button type="button" class="logout-button" data-logout>Log out</button>
+                        </div>
+                        <p class="account-status" data-account-status role="status" aria-live="polite"></p>
+                    </nav>
+                </header>
+                <section class="reading-intro">
+                    <h2>Your details, in one place</h2>
+                    <p>Review your personal information and keep your patient profile up to date.</p>
+                </section>
+                <p id="profileStatus" class="profile-status" role="status" aria-live="polite">Loading your profile...</p>
+                <button id="retryProfile" type="button" class="secondary-button" hidden>Try again</button>
+                <div id="profileContent" class="patient-profile-layout" hidden>
+                    <aside class="reading-form-card patient-profile-summary" aria-label="Profile summary">
+                        <div id="profilePhotoAvatar" class="profile-avatar patient-profile-avatar" data-patient-initials aria-hidden="true">?</div>
+                        <div class="profile-photo-controls">
+                            <label for="profilePhotoFile" class="logout-button photo-upload-label">Upload Profile Photo</label>
+                            <input id="profilePhotoFile" class="profile-photo-file" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" aria-describedby="photoHelp">
+                            <p id="photoHelp">JPG, JPEG, PNG, or WebP. Maximum 2 MB.</p>
+                            <div id="photoPreviewActions" hidden>
+                                <p>Preview your new photo, then save it.</p>
+                                <button id="saveProfilePhoto" type="button" class="logout-button">Save Photo</button>
+                                <button id="cancelProfilePhoto" type="button" class="photo-text-button">Cancel</button>
+                            </div>
+                            <button id="removeProfilePhoto" type="button" class="photo-text-button" hidden>Remove Photo</button>
+                            <p id="photoStatus" class="profile-status" role="status" aria-live="polite"></p>
+                        </div>
+                        <h2 id="summaryName"></h2>
+                        <p id="summaryEmail"></p>
+                        <span class="patient-account-badge">Patient Account</span>
+                        <div class="profile-privacy-note">
+                            <h3>Your account details</h3>
+                            <p>Your email is linked to your sign-in and is read-only. Optional details can be left blank if unknown.</p>
+                        </div>
+                    </aside>
+                    <div class="reading-form-card patient-profile-card">
+                        <section aria-labelledby="profileHeading">
+                            <div class="reading-form-heading patient-profile-heading">
+                                <div>
+                                    <h2 id="profileHeading">Personal Information</h2>
+                                    <p id="profileHint">Your saved patient details.</p>
+                                </div>
+                                <button id="editProfile" type="button" class="logout-button">Edit Profile</button>
+                            </div>
+                            <dl id="profileDetails" class="patient-profile-details">
+                                <div><dt>Full name</dt><dd data-profile-field="full_name"></dd></div>
+                                <div><dt>Email address</dt><dd data-profile-field="email"></dd></div>
+                                <div><dt>Phone number</dt><dd data-profile-field="phone"></dd></div>
+                                <div><dt>Date of birth</dt><dd data-profile-field="date_of_birth"></dd></div>
+                                <div><dt>Gender</dt><dd data-profile-field="gender"></dd></div>
+                                <div><dt>Blood group</dt><dd data-profile-field="blood_group"></dd></div>
+                            </dl>
+                            <form id="profileForm" hidden>
+                                <fieldset id="profileFields" disabled>
+                                    <legend class="profile-sr-only">Edit personal information</legend>
+                                    <div class="reading-form-grid">
+                                        <div class="form-group">
+                                            <label for="fullName">Full name *</label>
+                                            <input id="fullName" name="full_name" type="text" autocomplete="name" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="profileEmail">Email address (read-only)</label>
+                                            <input id="profileEmail" type="email" autocomplete="email" readonly aria-describedby="emailHint">
+                                            <small id="emailHint">Your sign-in email cannot be changed here.</small>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="profilePhone">Phone number</label>
+                                            <input id="profilePhone" name="phone" type="tel" autocomplete="tel" maxlength="32" placeholder="e.g. +91 98765 43210" aria-describedby="phoneHint">
+                                            <small id="phoneHint">7 to 15 digits, including country code.</small>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="dateOfBirth">Date of birth</label>
+                                            <input id="dateOfBirth" name="date_of_birth" type="date" autocomplete="bday" min="1900-01-01">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="profileGender">Gender</label>
+                                            <select id="profileGender" name="gender">
+                                                <option value="">Not specified</option>
+                                                <option>Female</option><option>Male</option>
+                                                <option>Non-binary</option><option>Prefer not to say</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="bloodGroup">Blood group</label>
+                                            <select id="bloodGroup" name="blood_group">
+                                                <option value="">Not specified</option>
+                                                <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+                                                <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="reading-form-actions">
+                                        <button id="cancelProfile" type="button" class="secondary-button">Cancel</button>
+                                        <button id="saveProfile" type="submit" class="auth-submit">Save Changes</button>
+                                    </div>
+                                </fieldset>
+                            </form>
+                        </section>
+                        <section class="password-change-section" aria-labelledby="passwordHeading">
+                            <div class="reading-form-heading">
+                                <h2 id="passwordHeading">Change Password</h2>
+                                <p id="passwordHelp">Choose a new password with at least 8 characters, different from your current password.</p>
+                            </div>
+                            <form id="changePasswordForm" aria-describedby="passwordHelp">
+                                <fieldset id="changePasswordFields">
+                                    <legend class="profile-sr-only">Change your account password</legend>
+                                    <div class="form-group">
+                                        <label for="currentPassword">Current Password *</label>
+                                        <div class="password-field">
+                                            <input id="currentPassword" name="current_password" type="password" autocomplete="current-password" required>
+                                            <button type="button" class="password-toggle" data-change-password-toggle="currentPassword" aria-controls="currentPassword" aria-label="Show current password" aria-pressed="false">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                                                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/>
+                                                    <circle cx="12" cy="12" r="3"/>
+                                                    <path class="password-eye-slash" d="m3 3 18 18"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="reading-form-grid">
+                                        <div class="form-group">
+                                            <label for="newPassword">New Password *</label>
+                                            <div class="password-field">
+                                                <input id="newPassword" name="new_password" type="password" autocomplete="new-password" required>
+                                                <button type="button" class="password-toggle" data-change-password-toggle="newPassword" aria-controls="newPassword" aria-label="Show new password" aria-pressed="false">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                                                        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/>
+                                                        <circle cx="12" cy="12" r="3"/>
+                                                        <path class="password-eye-slash" d="m3 3 18 18"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="confirmNewPassword">Confirm New Password *</label>
+                                            <div class="password-field">
+                                                <input id="confirmNewPassword" name="confirm_password" type="password" autocomplete="new-password" required>
+                                                <button type="button" class="password-toggle" data-change-password-toggle="confirmNewPassword" aria-controls="confirmNewPassword" aria-label="Show password confirmation" aria-pressed="false">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                                                        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/>
+                                                        <circle cx="12" cy="12" r="3"/>
+                                                        <path class="password-eye-slash" d="m3 3 18 18"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="reading-form-actions">
+                                        <button id="updatePassword" type="submit" class="auth-submit">Update Password</button>
+                                    </div>
+                                </fieldset>
+                            </form>
+                            <p id="passwordStatus" class="profile-status" role="status" aria-live="polite"></p>
+                        </section>
+                    </div>
+                </div>
+                <noscript><p>Enable JavaScript to view and edit your profile.</p></noscript>
+            </div>
+            <footer class="dashboard-footer">SmartHealth | TDP Project-2026</footer>
+        </main>
+    </div>
+    <script src="../js/notifications.js"></script>
+    <script src="../js/validators.js"></script>
+    <script src="../js/app.js" data-scripts="photo-codec.js,data-transfer.js,portal.js,profile.js,profile-photo.js"></script>
+</body>
+</html>

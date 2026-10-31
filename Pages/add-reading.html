@@ -1,0 +1,257 @@
+
+<!DOCTYPE html>
+<html lang="en" data-local-patient>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Add Health Reading | SmartHealth</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/page-layout.css">
+    <link rel="stylesheet" href="../css/notifications.css">
+</head>
+
+<body class="dashboard-page">
+
+    <noscript><p>Enable JavaScript to use local sign-in and view your saved records.</p></noscript>
+    <div class="dashboard-layout">
+
+        <!-- Sidebar -->
+        <aside class="dashboard-sidebar">
+
+            <a href="index.html" class="logo dashboard-logo">
+                <span class="logo-symbol">+</span>
+                Smart<span>Health</span>
+            </a>
+
+            <p class="sidebar-heading">PATIENT PORTAL</p>
+
+            <nav class="sidebar-nav" aria-label="Patient navigation">
+                <a href="dashboard.html">Dashboard</a>
+                <a href="add-reading.html" class="active">
+                    Add Reading
+                </a>
+                <a href="health-records.html">
+                    Health Records
+                </a>
+                <a href="health-trends.html">
+                    Health Trends
+                </a>
+                <a href="health-alerts.html">
+                    Health Alerts
+                </a>
+                <a href="consultation.html">
+                    Doctor Consultation
+                </a>
+                <a href="profile.html">My Profile</a>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <p>SmartHealth Patient Portal</p>
+                <a href="dashboard.html">Back to Dashboard</a>
+            </div>
+
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <div class="page-stage page-stage-primary">
+
+            <header class="dashboard-topbar">
+                <div>
+                    <p class="dashboard-eyebrow portal-label">PATIENT PORTAL</p>
+                    <h1>Add Health Reading</h1>
+                </div>
+
+                <nav class="account-navigation" aria-label="Account navigation">
+                    <div class="dashboard-profile">
+                        <a href="profile.html" class="patient-account-link" aria-label="Open My Profile">
+                        <div class="profile-avatar" data-patient-initials aria-hidden="true">?</div>
+                        <div class="profile-details">
+                            <strong data-patient-name>Loading account...</strong>
+                            <small>Patient Account</small>
+                        </div>
+                        </a>
+                        <button type="button" class="logout-button" data-logout>Log out</button>
+                    </div>
+                    <p class="account-status" data-account-status role="status" aria-live="polite"></p>
+                </nav>
+            </header>
+
+            <section class="reading-intro">
+                <h2>Record Your Health Measurements</h2>
+                <p>
+                    Enter your latest health readings below.
+                    Make sure the values match the measurements
+                    shown on your health devices.
+                </p>
+            </section>
+
+            <!-- Health Reading Form -->
+            <section class="reading-form-card health-information-card">
+
+                <div class="reading-form-heading">
+                    <h2>Health Information</h2>
+                    <p>Fields marked with * are required.</p>
+                </div>
+
+                <form id="healthReadingForm">
+
+                    <div class="reading-form-grid">
+
+                        <div class="form-group">
+                            <label for="heartRate">
+                                Heart Rate (BPM) *
+                            </label>
+                            <input
+                                type="number"
+                                id="heartRate"
+                                placeholder="e.g. 72"
+                                min="20"
+                                max="250"
+                                step="1"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="spo2">
+                                Blood Oxygen - SpO₂ (%) *
+                            </label>
+                            <input
+                                type="number"
+                                id="spo2"
+                                placeholder="e.g. 98"
+                                min="0"
+                                max="100"
+                                step="any"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="systolic">
+                                Systolic Blood Pressure *
+                            </label>
+                            <input
+                                type="number"
+                                id="systolic"
+                                placeholder="e.g. 120"
+                                min="40"
+                                max="300"
+                                step="1"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="diastolic">
+                                Diastolic Blood Pressure *
+                            </label>
+                            <input
+                                type="number"
+                                id="diastolic"
+                                placeholder="e.g. 80"
+                                min="20"
+                                max="200"
+                                step="1"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="temperature">
+                                Body Temperature (°C) *
+                            </label>
+                            <input
+                                type="number"
+                                id="temperature"
+                                placeholder="e.g. 36.8"
+                                min="25"
+                                max="45"
+                                step="any"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="readingDate">
+                                Measurement Date & Time *
+                            </label>
+                            <input
+                                type="datetime-local"
+                                id="readingDate"
+                                required
+                            >
+                        </div>
+
+                    </div>
+
+                    <div class="reading-form-actions">
+                        <button type="reset" class="secondary-button">
+                            Clear Form
+                        </button>
+
+                        <button type="submit" class="auth-submit">
+                            Save Health Reading
+                        </button>
+                    </div>
+
+                    <p id="readingMessage"
+                       class="form-message"
+                       role="status"></p>
+
+                </form>
+
+            </section>
+
+            </div>
+
+            <!-- Saved Readings -->
+            <section class="dashboard-section saved-readings-section page-stage">
+
+                <div class="dashboard-section-heading">
+                    <div>
+                        <h2>Saved Health Readings</h2>
+                        <p>Readings saved to your account</p>
+                    </div>
+                </div>
+
+                <div class="dashboard-panel table-panel">
+                    <div class="table-scroll">
+                        <table class="health-table">
+                            <thead>
+                                <tr>
+                                    <th>Date & Time</th>
+                                    <th>Heart Rate</th>
+                                    <th>SpO₂</th>
+                                    <th>Blood Pressure</th>
+                                    <th>Temperature</th>
+                                    <th scope="col">Actions</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="savedReadingsBody"></tbody>
+                        </table>
+                    </div>
+
+                    <p id="emptyReadingsMessage"
+                       class="empty-readings">
+                        No health readings saved yet.
+                    </p>
+                </div>
+            </section>
+
+            <footer class="dashboard-footer">
+                SmartHealth | TDP Project-2026
+            </footer>
+
+        </main>
+    </div>
+    <script src="../js/notifications.js"></script>
+    <script src="../js/validators.js"></script>
+    <script src="../js/app.js" data-scripts="portal.js,health-readings.js,add-reading.js"></script>
+</body>
+</html>

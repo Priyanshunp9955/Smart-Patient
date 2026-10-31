@@ -1,0 +1,120 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Patient Login | SmartHealth</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/notifications.css">
+</head>
+<body class="auth-page">
+
+    <header class="auth-header">
+        <div class="container">
+            <a href="index.html" class="logo">
+                <span class="logo-symbol">+</span>
+                Smart<span>Health</span>
+            </a>
+        </div>
+    </header>
+
+    <main class="auth-layout">
+
+        <section class="auth-info">
+            <div class="auth-info-content">
+                <span class="section-tag">SMARTHEALTH</span>
+
+                <h1>Your Health Information, All in One Place.</h1>
+
+                <p>
+                    Access your health records, review trends,
+                    and stay informed about important changes
+                    in your health readings.
+                </p>
+
+                <div class="auth-highlights">
+                    <p>✓ Organized health records</p>
+                    <p>✓ Easy-to-read health trends</p>
+                    <p>✓ Early health alerts</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="auth-form-section">
+            <div class="auth-card">
+                <p class="local-account-note">Local academic app: accounts and records stay in this browser. Sign-in does not protect data from someone who controls this browser or computer.</p>
+
+                <h2>Welcome Back</h2>
+                <p class="auth-subtitle">
+                    Sign in to access your patient dashboard.
+                </p>
+
+                <form id="loginForm">
+
+                    <div class="form-group">
+                        <label for="loginEmail">Email Address</label>
+                        <input
+                            type="email"
+                            id="loginEmail"
+                            name="email"
+                            placeholder="Enter your email"
+                            autocomplete="email"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+
+                        <div class="password-field">
+                            <input
+                                type="password"
+                                id="loginPassword"
+                                name="password"
+                                placeholder="Enter your password"
+                                autocomplete="current-password"
+                                required
+                            >
+
+                            <button
+                                type="button"
+                                class="password-toggle"
+                                data-target="loginPassword"
+                                aria-label="Show password"
+                            >
+                                Show
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="auth-submit">
+                        Sign In
+                    </button>
+
+                    <p id="loginMessage" class="form-message" role="status"></p>
+
+                </form>
+
+                <p class="auth-switch">
+                    Don't have an account?
+                    <a href="register.html">Create Account</a>
+                </p>
+
+                <a href="index.html" class="back-link">
+                    ← Back to Home
+                </a>
+
+                
+
+            </div>
+        </section>
+
+    </main>
+    <script src="../js/notifications.js"></script>
+    <script src="../js/validators.js"></script>
+    <script src="../js/app.js" data-scripts="script.js"></script>
+</body>
+</html>

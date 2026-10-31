@@ -1,7 +1,10 @@
-# Local configuration and Python environments
+# Private local configuration and archived migration credentials
+.local/
 .env
 .env.*
 !.env.example
+
+# Artifacts from older Python checkouts
 venv/
 .venv/
 __pycache__/
@@ -12,3 +15,7 @@ __pycache__/
 Microsoft/
 .vscode/
 .idea/
+
+# Generated browser verification output (synthetic fixture data only)
+tests/artifacts/
+node_modules/

@@ -1,0 +1,284 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Smart Patient Health | Health Monitoring</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/notifications.css">
+</head>
+<body class="home-page">
+
+    <!-- Website Header -->
+    <header class="site-header">
+        <div class="container navbar">
+
+            <a href="index.html" class="logo">
+                <span class="logo-symbol" aria-hidden="true">+</span>
+                <span class="logo-copy">
+                    <span class="logo-name">SmartHealth</span>
+                    <span class="logo-tagline">Your Health Companion</span>
+                </span>
+            </a>
+
+            <button class="nav-toggle" type="button" aria-controls="homepage-navigation"
+                    aria-expanded="false" aria-label="Open navigation menu">
+                <svg class="nav-icon nav-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+                <svg class="nav-icon nav-close-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="m6 6 12 12M6 18 18 6"/>
+                </svg>
+            </button>
+
+            <div class="homepage-navigation" id="homepage-navigation">
+                <nav class="nav-links" aria-label="Main navigation">
+                    <a href="#home" aria-current="location">
+                        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-8h6v8"/>
+                        </svg>
+                        <span>Home</span>
+                    </a>
+                    <a href="#about">
+                        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>
+                        </svg>
+                        <span>About</span>
+                    </a>
+                    <a href="#features">
+                        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+                            <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+                        </svg>
+                        <span>Features</span>
+                    </a>
+                    <a href="#consultation">
+                        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M6 3v5a4 4 0 0 0 8 0V3M4 3h4m4 0h4M10 12v3a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="10" r="3"/>
+                        </svg>
+                        <span>Consultation</span>
+                    </a>
+                    <a href="#Team">
+                        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 4v3"/>
+                        </svg>
+                        <span>Team</span>
+                    </a>
+                </nav>
+
+                <a href="login.html" class="nav-button">
+                    <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>
+                    </svg>
+                    Patient Login
+                </a>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <main>
+        <section class="hero" id="home">
+            <div class="container hero-content">
+
+                <div class="hero-text">
+                    <span class="section-tag">
+                        SMART HEALTH MONITORING
+                    </span>
+
+                    <h1>
+                        Your Health,
+                        <span>Better Understood.</span>
+                    </h1>
+
+                    <p>
+                        Keep track of your important health
+                        readings, understand changes over time,
+                        and stay informed with early health alerts.
+                    </p>
+
+                    <div class="hero-actions">
+                        <a href="#features" class="primary-button">
+                            Explore Our Features
+                        </a>
+
+                        <a href="#about" class="secondary-button">
+                            Learn More
+                        </a>
+                    </div>
+                </div>
+
+                <div class="hero-visual">
+                    <div class="health-preview">
+                        <div class="preview-heading">
+                            <span>Health Overview</span>
+                        </div>
+
+                        <div class="reading-card">
+                            <span>Heart Rate</span>
+                            <strong>72 <small>BPM</small></strong>
+                        </div>
+
+                        <div class="reading-card">
+                            <span>Blood Oxygen</span>
+                            <strong>98 <small>%</small></strong>
+                        </div>
+
+                        <div class="reading-card">
+                            <span>Body Temperature</span>
+                            <strong>36.8 <small>°C</small></strong>
+                        </div>
+
+                        <p class="preview-note">
+                            Illustrative readings only
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section class="content-section" id="about">
+            <div class="container">
+                <span class="section-tag">ABOUT THE SYSTEM</span>
+
+                <h2>Making Health Monitoring Simpler</h2>
+
+                <p class="section-description">
+                    SmartHealth is a web-based health monitoring system that helps patients record and manage their health information. It provides an easy-to-use dashboard to track health readings, view trends, and receive rule-based alerts for better health awareness.
+                </p>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="content-section features-section" id="features">
+            <div class="container">
+
+                <span class="section-tag">OUR FEATURES</span>
+                <h2>Everything You Need to Track Your Health</h2>
+
+                <div class="feature-grid">
+
+                    <article class="feature-card">
+                        <div class="feature-icon">01</div>
+                        <h3>Health Records</h3>
+                        <p>
+                            Maintain organized records of heart rate,
+                            SpO₂, blood pressure, and temperature.
+                        </p>
+                    </article>
+
+                    <article class="feature-card">
+                        <div class="feature-icon">02</div>
+                        <h3>Trend Analysis</h3>
+                        <p>
+                            Compare past and current readings
+                            using easy-to-understand graphs.
+                        </p>
+                    </article>
+
+                    <article class="feature-card">
+                        <div class="feature-icon">03</div>
+                        <h3>Early Alerts</h3>
+                        <p>
+                            Highlight readings that meet predefined
+                            criteria and may need medical review.
+                        </p>
+                    </article>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Consultation Section -->
+        <section class="content-section" id="consultation">
+            <div class="container consultation-box">
+
+                <div>
+                    <span class="section-tag">DOCTOR CONSULTATION</span>
+                    <h2>Need Professional Medical Advice?</h2>
+
+                    <p>
+                        Patients can choose to consult a doctor
+                        whenever they feel medical guidance
+                        is necessary.
+                    </p>
+                </div>
+
+                <a href="#consultation" class="primary-button">
+                    Consultation Coming Soon
+                </a>
+
+            </div>
+        </section>
+
+        <!-- Meet Our Team -->
+        <section class="content-section team-section" id="Team" aria-labelledby="team-heading">
+            <div class="container">
+                <div class="team-intro">
+                    <span class="section-tag">SMARTHEALTH &ndash; TDP PROJECT-2026</span>
+                    <h2 id="team-heading">Meet Our Team</h2>
+                    <p>The faculty guidance and student collaboration behind SmartHealth.</p>
+                    <p class="team-university">Vivekananda Global University, Jaipur</p>
+                </div>
+
+                <!-- Team initials keep these profiles self-contained. -->
+                <article class="team-card team-supervisor" aria-labelledby="supervisor-name">
+                    <div class="team-avatar" role="img" aria-label="Ms. Anjali Kumari">
+                        <span class="team-avatar-fallback" aria-hidden="true">AK</span>
+                    </div>
+                    <div>
+                        <p class="team-eyebrow">Faculty Supervisor</p>
+                        <h3 id="supervisor-name">Ms. Anjali Kumari</h3>
+                        <p class="team-role">Project Supervisor</p>
+                        <p class="team-qualification">Qualification: Bachelor of Physiotherapy (BPT)</p>
+                    </div>
+                </article>
+
+                <h3 class="team-group-title" id="student-team-heading">Student Development Team</h3>
+                <div class="team-grid" role="group" aria-labelledby="student-team-heading">
+                    <article class="team-card" aria-labelledby="priyanshu-name">
+                        <div class="team-avatar" role="img" aria-label="Priyanshu Kumar">
+                            <span class="team-avatar-fallback" aria-hidden="true">PK</span>
+                        </div>
+                        <h4 id="priyanshu-name">Priyanshu Kumar</h4>
+                        <p class="team-role">Student Developer</p>
+                    </article>
+
+                    <article class="team-card" aria-labelledby="vikramaditya-name">
+                        <div class="team-avatar" role="img" aria-label="Vikramaditya Kumar">
+                            <span class="team-avatar-fallback" aria-hidden="true">VK</span>
+                        </div>
+                        <h4 id="vikramaditya-name">Vikramaditya Kumar</h4>
+                        <p class="team-role">Student Developer</p>
+                    </article>
+
+                    <article class="team-card" aria-labelledby="pranjal-name">
+                        <div class="team-avatar" role="img" aria-label="Pranjal Singh">
+                            <span class="team-avatar-fallback" aria-hidden="true">PS</span>
+                        </div>
+                        <h4 id="pranjal-name">Pranjal Singh</h4>
+                        <p class="team-role">Student Developer</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="container footer-content">
+            <p>SmartHealth — Patient Health Monitoring System</p>
+            <p>TDP Project-2026</p>
+            <p class="footer-credit">Developed by SmartHealth TDP Team | Supervised by Ms. Anjali Kumari</p>
+        </div>
+    </footer>
+    <script src="../js/notifications.js"></script>
+    <script src="../js/script.js"></script>
+</body>
+</html>

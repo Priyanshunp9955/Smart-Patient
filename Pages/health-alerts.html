@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" data-local-patient>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Health Alerts | SmartHealth</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/page-layout.css">
+    <link rel="stylesheet" href="../css/notifications.css">
+    <link rel="stylesheet" href="../css/health-alerts.css">
+</head>
+
+<body class="dashboard-page health-alerts-page">
+
+    <noscript><p>Enable JavaScript to use local sign-in and view your saved records.</p></noscript>
+    <div class="dashboard-layout">
+
+        <!-- Sidebar Navigation -->
+        <aside class="dashboard-sidebar">
+
+            <a href="index.html" class="logo dashboard-logo">
+                <span class="logo-symbol">+</span>
+                Smart<span>Health</span>
+            </a>
+
+            <p class="sidebar-heading">PATIENT PORTAL</p>
+
+            <nav class="sidebar-nav" aria-label="Patient navigation">
+                <a href="dashboard.html">
+                    Dashboard
+                </a>
+                <a href="add-reading.html">
+                    Add Reading
+                </a>
+
+                <a href="health-records.html">
+                    Health Records
+                </a>
+
+                <a href="health-trends.html">
+                    Health Trends
+                </a>
+
+                <a href="health-alerts.html" class="active" aria-current="page">
+                    Health Alerts
+                </a>
+
+                <a href="consultation.html">
+                    Doctor Consultation
+                </a>
+                <a href="profile.html">My Profile</a>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <p>SmartHealth Patient Portal</p>
+                <a href="index.html">Back to Home</a>
+            </div>
+
+        </aside>
+
+
+        <main class="dashboard-main">
+            <header class="dashboard-topbar">
+                <div>
+                    <p class="dashboard-eyebrow">ACADEMIC ALERT ANALYSIS</p>
+                    <h1>Health Alerts</h1>
+                </div>
+
+                <nav class="account-navigation" aria-label="Account navigation">
+                    <div class="dashboard-profile">
+                        <a href="profile.html" class="patient-account-link" aria-label="Open My Profile">
+                        <div class="profile-avatar" data-patient-initials aria-hidden="true">?</div>
+                        <div class="profile-details">
+                            <strong data-patient-name>Loading account...</strong>
+                            <small>Patient Account</small>
+                        </div>
+                        </a>
+                        <button type="button" class="logout-button" data-logout>Log out</button>
+                    </div>
+                    <p class="account-status" data-account-status role="status" aria-live="polite"></p>
+                </nav>
+            </header>
+            <p id="dashboardReadingsStatus" class="dashboard-note" role="status"></p>
+
+<section class="dashboard-section" id="health-alerts" aria-labelledby="analysis-heading">
+
+    <div class="dashboard-section-heading">
+        <div>
+            <h2 id="analysis-heading">Early Alert Analysis</h2>
+            <p>
+                A clear view of the demonstration rules matched by your latest saved reading.
+            </p>
+        </div>
+
+    </div>
+
+    <div class="dashboard-panel alert-analysis-panel">
+
+        <div class="alert-section-header">
+            <span class="analysis-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3 4 6v5c0 5 8 10 8 10s8-5 8-10V6l-8-3Z"/>
+                    <path d="M7 12h3l1.5-3 2 6 1.5-3h2"/>
+                </svg>
+            </span>
+            <div>
+                <h3>Your latest saved reading</h3>
+                <p id="alertSummary" role="status">
+                    Checking saved health readings...
+                </p>
+                <p id="alertReadingContext" hidden></p>
+            </div>
+            <span id="alertMatchCount" class="alert-match-count" hidden></span>
+        </div>
+
+        <div id="alertsContainer"
+             class="alerts-container"
+             aria-live="polite">
+            <p class="alert-state-message">Loading your saved readings...</p>
+        </div>
+
+        <aside class="alert-disclaimer" aria-labelledby="alert-disclaimer-heading">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                <circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v2"/>
+            </svg>
+            <div>
+                <h3 id="alert-disclaimer-heading">Academic demonstration only</h3>
+                <p>These alerts are generated using predefined academic demonstration thresholds. They do not provide a medical diagnosis or confirm whether a patient is medically safe. For medical concerns, seek advice from a qualified healthcare professional.</p>
+                <p class="alert-urgent-guidance">For severe symptoms, such as severe difficulty breathing or chest tightness, seek urgent medical attention immediately. Do not wait for an alert or a consultation.</p>
+            </div>
+        </aside>
+
+    </div>
+
+</section>
+
+<section class="dashboard-section" id="consultation" aria-labelledby="consultation-heading">
+                <div class="consultation-panel alert-consultation-panel">
+                    <span class="consultation-icon" aria-hidden="true">
+                        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M7 5v7a6 6 0 0 0 12 0V5M7 5h3m9 0h-3M13 18v5a5 5 0 0 0 10 0v-3"/>
+                            <circle cx="23" cy="17" r="3"/>
+                        </svg>
+                    </span>
+                    <div class="alert-consultation-copy">
+                        <h2 id="consultation-heading">Need to Consult a Doctor?</h2>
+                        <p>
+                            You can choose to speak with a qualified healthcare professional
+                            if you feel unwell or have concerns about your readings.
+                        </p>
+                        <p class="consultation-choice">Consultation is optional and always your choice.</p>
+                    </div>
+                    <a href="consultation.html" class="primary-button">
+                        Explore Doctor Consultation <span aria-hidden="true">&rarr;</span>
+                    </a>
+                </div>
+            </section>
+
+            <footer class="dashboard-footer">
+                SmartHealth | TDP Project-2026
+            </footer>
+        </main>
+    </div>
+    <script src="../js/notifications.js"></script>
+    <script src="../js/validators.js"></script>
+    <script src="../js/app.js" data-scripts="portal.js,health-readings.js,health-alerts.js,dashboard.js"></script>
+</body>
+</html>
